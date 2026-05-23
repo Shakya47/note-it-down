@@ -1,0 +1,75 @@
+/* NoteItem Component Styles (CSS Module) */
+
+.noteItem {
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0px var(--color-dark);
+  transition: transform 0.1s, box-shadow 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.noteItem.active {
+  border-color: var(--color-accent-blue);
+  background-color: var(--color-active-bg);
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 4.5px 4.5px 0px var(--color-dark);
+}
+
+.noteItem:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--color-dark);
+}
+
+.noteItem:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--shadow-active);
+}
+
+.noteItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.noteTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--border-radius-sm);
+  transition: background-color 0.1s, transform 0.1s;
+}
+
+.deleteBtn:hover {
+  background-color: var(--color-delete-hover-bg);
+  transform: scale(1.1);
+}
+
+.notePreview {
+  font-size: 12px;
+  color: var(--color-text);
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.noteDate {
+  font-size: 10px;
+  color: var(--color-gray);
+  margin-top: 2px;
+}

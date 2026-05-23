@@ -1,0 +1,48 @@
+/* NoteList Component Styles (CSS Module) */
+
+.noteList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emptyStateCard {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-main);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.emptyEmoji {
+  font-size: 40px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.emptyText {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-gray);
+}
+
+/* Fallback float animation if global stylesheet is not loaded */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}

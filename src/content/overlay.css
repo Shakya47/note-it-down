@@ -1,0 +1,314 @@
+/* Note It Down — Content Script Overlay Styles */
+/* These styles are injected into the host page for the editor overlay. */
+
+/* Design tokens supporting light and dark modes */
+:root, :host {
+  /* Default Light theme variables */
+  --nid-color-bg: #FFFBF0;
+  --nid-color-accent-yellow: #FFD166;
+  --nid-color-accent-pink: #FF6B9D;
+  --nid-color-accent-teal: #06D6A0;
+  --nid-color-accent-blue: #118AB2;
+  --nid-color-dark: #1A1A1A;
+  --nid-color-white: #FFFFFF;
+  --nid-color-light-gray: #F0F0F0;
+  --nid-color-gray: #888888;
+  --nid-color-red: #EF476F;
+  --nid-color-text: #1A1A1A;
+  --nid-color-active-bg: #EBF8FF;
+  --nid-color-delete-hover-bg: #FFEAEF;
+
+  --nid-font-family: 'Fredoka', 'Nunito', system-ui, -apple-system, sans-serif;
+  --nid-border-width: 3px;
+  --nid-border-radius-lg: 18px;
+  --nid-border-radius-md: 12px;
+  --nid-border-radius-sm: 8px;
+  --nid-shadow-main: 4px 4px 0px var(--nid-color-dark);
+}
+
+/* Light Theme overrides */
+.nid-theme-light {
+  --nid-color-bg: #FFFBF0;
+  --nid-color-dark: #1A1A1A;
+  --nid-color-white: #FFFFFF;
+  --nid-color-light-gray: #F0F0F0;
+  --nid-color-gray: #888888;
+  --nid-color-text: #1A1A1A;
+  --nid-color-active-bg: #EBF8FF;
+  --nid-color-delete-hover-bg: #FFEAEF;
+}
+
+/* Dark Theme overrides (cute warm slate gray) */
+.nid-theme-dark {
+  --nid-color-bg: #2E303C;
+  --nid-color-dark: #14161D;
+  --nid-color-white: #3B3E4F;
+  --nid-color-light-gray: #1F212A;
+  --nid-color-gray: #A0AEC0;
+  --nid-color-text: #F7FAFC;
+  --nid-color-active-bg: #1F2A38;
+  --nid-color-delete-hover-bg: #4A1E29;
+}
+
+.nid-theme-dark .nid-drawer-new-btn {
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.nid-theme-dark .nid-drawer-new-btn:hover {
+  box-shadow: 5px 5px 0px #000000;
+}
+
+.nid-theme-dark .nid-drawer-new-btn:active {
+  box-shadow: 1px 1px 0px #000000;
+}
+
+/* Map our namespaced tokens to the un-prefixed names used by NoteEditor.module.css */
+.nid-overlay-root {
+  --color-bg: var(--nid-color-bg);
+  --color-accent-yellow: var(--nid-color-accent-yellow);
+  --color-accent-pink: var(--nid-color-accent-pink);
+  --color-accent-teal: var(--nid-color-accent-teal);
+  --color-accent-blue: var(--nid-color-accent-blue);
+  --color-dark: var(--nid-color-dark);
+  --color-white: var(--nid-color-white);
+  --color-light-gray: var(--nid-color-light-gray);
+  --color-gray: var(--nid-color-gray);
+  --color-red: var(--nid-color-red);
+  --color-text: var(--nid-color-text);
+  --color-active-bg: var(--nid-color-active-bg);
+  --color-delete-hover-bg: var(--nid-color-delete-hover-bg);
+  --font-family: var(--nid-font-family);
+  --border-width: var(--nid-border-width);
+  --border-radius-lg: var(--nid-border-radius-lg);
+  --border-radius-md: var(--nid-border-radius-md);
+  --border-radius-sm: var(--nid-border-radius-sm);
+  --shadow-main: var(--nid-shadow-main);
+}
+
+/* Slide-out Sidebar Drawer Container */
+.nid-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background-color: var(--nid-color-bg);
+  border-left: var(--nid-border-width) solid var(--nid-color-dark);
+  box-shadow: -8px 0px 0px rgba(0, 0, 0, 0.1), var(--nid-shadow-main);
+  z-index: 2147483645;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--nid-font-family);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+/* Open and Closed States with CSS transitions */
+.nid-drawer-open {
+  transform: translateX(0);
+}
+
+.nid-drawer-closed {
+  transform: translateX(330px);
+  /* slide completely out of screen (+ border offset) */
+}
+
+/* Drawer Header Styling */
+.nid-drawer-header {
+  background-color: var(--nid-color-accent-yellow);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--nid-border-width) solid var(--nid-color-dark);
+  box-sizing: border-box;
+}
+
+.nid-drawer-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--nid-color-dark);
+  text-shadow: 1px 1px 0 var(--nid-color-white);
+  margin: 0;
+}
+
+.nid-drawer-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nid-drawer-github-link {
+  color: var(--nid-color-dark) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.1s;
+  text-decoration: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.nid-drawer-github-link svg {
+  display: block !important;
+  fill: var(--nid-color-dark) !important;
+}
+
+.nid-drawer-github-link:hover {
+  transform: scale(1.1);
+}
+
+.nid-drawer-avatar-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: var(--nid-border-width) solid var(--nid-color-dark);
+  background-color: var(--nid-color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 1.5px 1.5px 0px var(--nid-color-dark);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.nid-drawer-avatar-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 2px 2px 0px var(--nid-color-dark);
+}
+
+.nid-drawer-avatar-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0px var(--nid-color-dark);
+}
+
+.nid-drawer-avatar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nid-drawer-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--nid-color-dark);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.nid-drawer-close-btn:hover {
+  color: var(--nid-color-red);
+}
+
+/* Main Area */
+.nid-drawer-main {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.nid-drawer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--nid-color-gray);
+}
+
+/* New Note Button inside drawer */
+.nid-drawer-new-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--nid-color-accent-pink);
+  border: var(--nid-border-width) solid var(--nid-color-dark);
+  border-radius: var(--nid-border-radius-md);
+  font-family: var(--nid-font-family);
+  font-size: 14px;
+  font-weight: 800;
+  color: #FFFFFF;
+  text-shadow: 1.5px 1.5px 0 var(--nid-color-dark);
+  cursor: pointer;
+  box-shadow: var(--nid-shadow-main);
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-sizing: border-box;
+}
+
+.nid-drawer-new-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px var(--nid-color-dark);
+}
+
+.nid-drawer-new-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--nid-color-dark);
+}
+
+/* List Wrapper with scroll */
+.nid-drawer-list-wrapper {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 2px;
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar for Drawer List */
+.nid-drawer-list-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.nid-drawer-list-wrapper::-webkit-scrollbar-track {
+  background: var(--nid-color-bg);
+}
+
+.nid-drawer-list-wrapper::-webkit-scrollbar-thumb {
+  background: var(--nid-color-dark);
+  border-radius: 4px;
+  border: 2px solid var(--nid-color-bg);
+}
+
+/* Animations */
+@keyframes nid-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes nid-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nid-float {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
