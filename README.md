@@ -2,11 +2,11 @@
 
 ![Note It Down Demo](public/demo.gif)
 
-A cute, cartoonish note-taking Chrome Extension that leverages the modern **Document Picture-in-Picture (PiP)** API to create floating, borderless, always-on-top text editors.
+A note-taking Chrome Extension that leverages the modern **Document Picture-in-Picture (PiP)** API to create floating, borderless, always-on-top text editors.
 
 ## Features
 - **Floating PiP Editor**: Instantly pop out any note into a native, always-on-top Picture-in-Picture window.
-- **Cute Cartoon Aesthetic**: A fully themed light and dark mode UI with a playful, bubbly design.
+- **Themed Aesthetic**: A fully themed light and dark mode UI.
 - **Shadow DOM Isolation**: The popup launcher is injected directly into the webpage using an isolated Shadow DOM, completely shielding it from aggressive CSS bleeding on strict sites like Reddit.
 - **Zero Distractions**: The PiP editor strips away borders, headers, and footers to provide a 100% full-bleed, immersive writing canvas.
 - **Offline First**: All notes are stored locally in Chrome's storage. No internet required.
@@ -76,7 +76,7 @@ Initially, we planned to host the note list inside standard Chrome extension con
 ### How We Tackled It
 We completely abandoned the side panel and popup HTML layout. 
 * **The Solution**: We migrated the entire list UI into a **webpage-injected sidebar drawer panel** inside the active tab. 
-* Clicking the extension icon now triggers a background service worker to send a message to a lightweight, dynamic content script IIFE. The script mounts a persistent, warm cartoon-styled sliding drawer directly into the host webpage's DOM. 
+* Clicking the extension icon now triggers a background service worker to send a message to a lightweight, dynamic content script IIFE. The script mounts a persistent sliding drawer directly into the host webpage's DOM. 
 
 ---
 
@@ -113,13 +113,13 @@ Highly secure sites (such as `google.com`, `github.com`, or `chromewebstore.goog
 ### The Problem
 Chrome inserts content stylesheets inside an **isolated world** so extension styles do not pollute or conflict with the host page.
 * **Roadblock**: Stylesheets inserted via `chrome.scripting.insertCSS` or dynamic script tags do not appear in the host document's `document.styleSheets` list. 
-* Because the `@pip-it-up/react` engine relies on copying elements from `document.styleSheets` into the new PiP window's `<head>`, it copied an empty list, causing the floating note editor to lose its cartoon themes, custom scrollbars, and borders, rendering with raw unstyled HTML.
+* Because the `@pip-it-up/react` engine relies on copying elements from `document.styleSheets` into the new PiP window's `<head>`, it copied an empty list, causing the floating note editor to lose its themes, custom scrollbars, and borders, rendering with raw unstyled HTML.
 
 ### How We Tackled It
 * **The Solution**: Inside the `NoteEditor.tsx` component, we wrote a `useEffect` that listens for the floating PiP window's birth.
 * When active, it directly queries the newly created window context: `(window as any).documentPictureInPicture.window`.
 * It fetches the absolute extension URL of the compiled standalone style sheet: `chrome.runtime.getURL('content.css')` (granted access via `web_accessible_resources` in `manifest.json`).
-* It appends a custom `<link rel="stylesheet">` straight into the PiP window document's `<head>`, immediately mapping all coordinates, animations, and cartoon styling.
+* It appends a custom `<link rel="stylesheet">` straight into the PiP window document's `<head>`, immediately mapping all coordinates, animations, and styling.
 
 ---
 
