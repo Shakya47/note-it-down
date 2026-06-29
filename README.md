@@ -10,6 +10,7 @@ A note-taking Chrome Extension that leverages the modern **Document Picture-in-P
 - **Shadow DOM Isolation**: The popup launcher is injected directly into the webpage using an isolated Shadow DOM, completely shielding it from aggressive CSS bleeding on strict sites like Reddit.
 - **Zero Distractions**: The PiP editor strips away borders, headers, and footers to provide a 100% full-bleed, immersive writing canvas.
 - **Offline First**: All notes are stored locally in Chrome's storage. No internet required.
+- **Zero-Knowledge Sync**: Opt-in, end-to-end client-side encrypted sync (AES-GCM 256-bit) via a self-hosted Cloudflare Worker KV relay.
 
 ## Installation (Developer Mode)
 
@@ -55,112 +56,33 @@ import { PipWrapper } from '@pip-it-up/react'
 
 ---
 
-# Chrome Extension Document Picture-in-Picture: Technical Challenges & Solutions
+## ☁️ Zero-Knowledge Sync Layer (Optional)
 
-This section acts as a comprehensive technical post-mortem for the **Note It Down** Proof of Concept. It details the core browser policies, security boundaries, and async state hurdles we faced when building a Picture-in-Picture (PiP) enabled React extension, and how we engineered our way around them.
+*Note It Down* includes an opt-in, end-to-end encrypted sync system. Your notes are encrypted client-side using derived AES-GCM keys before leaving the device. Sync runs through a **user-deployed** Cloudflare Worker, meaning you own 100% of your data and credentials.
 
----
+For full configuration and deployment steps, see the **[sync-worker/README.md](sync-worker/README.md)** (or absolute path **[sync-worker/README.md](file:///Users/saurabhshakya/Documents/Projects/note-it-down/sync-worker/README.md)**).
 
-## 🚀 The Core Architectural Goal
-To build a Chrome extension that allows users to click a note in a list and have the note editor float instantly in an **always-on-top, borderless Document Picture-in-Picture (PiP) window** using React 19, Vite, and `@pip-it-up/react`.
-
----
-
-## 🚧 Challenge 1: The Sandboxed Extension Security Boundary
-### The Problem
-Initially, we planned to host the note list inside standard Chrome extension contexts like the **Popup panel** (toolbar click) or the **Side Panel** (`chrome.sidePanel`). 
-* **Roadblock**: Chrome strictly blocks the Document PiP API (`documentPictureInPicture.requestWindow()`) inside extension popup and side panel contexts. Attempting to call it from these frames instantly throws an error:
-  > *Uncaught (in promise) TypeError: documentPictureInPicture.requestWindow is not a function* or *SecurityError: Disallowed in this context.*
-* **Why?** Chrome isolates extension popups/panels. Since they do not run inside a standard webpage tab context, they are strictly sandboxed from launching floating OS-level window containers.
-
-### How We Tackled It
-We completely abandoned the side panel and popup HTML layout. 
-* **The Solution**: We migrated the entire list UI into a **webpage-injected sidebar drawer panel** inside the active tab. 
-* Clicking the extension icon now triggers a background service worker to send a message to a lightweight, dynamic content script IIFE. The script mounts a persistent sliding drawer directly into the host webpage's DOM. 
+### Why Cloudflare Workers & KV?
+Deploying your own worker provides a powerful backend with zero overhead:
+- **100% Private & Self-Hosted**: No accounts, no database hosting, and zero visibility of your notes by anyone (including Cloudflare, as all blobs are client-side encrypted).
+- **Generous Free Tier**: Cloudflare's free tier is more than enough for personal note-taking:
+  - **Storage**: Up to **1 GB** of free data in Cloudflare KV (equivalent to hundreds of thousands of notes).
+  - **Requests**: **100,000 free requests** per day.
+  - **KV Operations**: **100,000 read** operations and **1,000 write/delete** operations per day for free. (Assuming you sync 2-3 times a day, you will use less than 1% of the free tier).
+- **Global Speed**: Runs on Cloudflare's edge network, meaning sync is fast and responsive from any location.
 
 ---
 
-## ⚡ Challenge 2: Asynchronous User Gesture Expiration
-### The Problem
-To open a Document Picture-in-Picture window, Chrome mandates a **direct, synchronous user gesture** (such as a physical click handler). 
-* **Roadblock**: If the note list is in the extension popup and you click a note:
-  1. User clicks item in popup.
-  2. Popup sends a message to the content script (`chrome.tabs.sendMessage`).
-  3. Content script receives the message asynchronously.
-  4. Content script attempts to call `documentPictureInPicture.requestWindow()`.
-  * **Result**: The browser blocks the request with:
-    > *SecurityError: Must be handling a user gesture to use picture-in-picture.*
-  * **Why?** The asynchronous message passing boundary completely destroys Chrome's temporary user gesture token, making the click invalid by the time the script receives it.
+## 🚀 Technical Challenges & Solutions
 
-### How We Tackled It
-* **The Solution**: By injecting the sliding sidebar drawer directly into the webpage's DOM, **every click on the drawer list is a direct webpage user gesture!**
-* When the user clicks **✨ New Note** or a note item inside our sliding drawer, we trigger the `<PipWrapper>` element's state synchronously inside the click callback. Since the click takes place inside the host tab's DOM, the user gesture token remains intact, enabling **100% direct, single-click Picture-in-Picture openings**!
+Building a Chrome extension that blends the Document Picture-in-Picture API with React 19, Vite, and injected content scripts introduced several browser security and lifecycle boundaries. Here is how we tackled them:
 
----
-
-## 🛡️ Challenge 3: Host Page Content Security Policies (CSP)
-### The Problem
-Highly secure sites (such as `google.com`, `github.com`, or `chromewebstore.google.com`) have strict Content Security Policies that block dynamic script imports or external script evaluation.
-* **Roadblock**: Standard extension builders bundle content scripts with multiple lazy-loaded dynamic code splitting chunks (e.g. `import()`). When injected on secure sites, the browser blocks these chunk imports, throwing a CSP violation and causing the content script to crash immediately on DOM mount.
-
-### How We Tackled It
-* **The Solution**: We restructured the Vite build process in `vite.content.config.ts`.
-* We configured the content script builder to output the entire environment (React 19, styling, list handlers, and the editor) into a **single standalone classic IIFE (Immediately Invoked Function Expression) bundle** with zero dynamic import statements. This single bundled script executes flawlessly on even the most secure sites.
-
----
-
-## 🎨 Challenge 4: Stylesheet Losses Across Isolated Worlds
-### The Problem
-Chrome inserts content stylesheets inside an **isolated world** so extension styles do not pollute or conflict with the host page.
-* **Roadblock**: Stylesheets inserted via `chrome.scripting.insertCSS` or dynamic script tags do not appear in the host document's `document.styleSheets` list. 
-* Because the `@pip-it-up/react` engine relies on copying elements from `document.styleSheets` into the new PiP window's `<head>`, it copied an empty list, causing the floating note editor to lose its themes, custom scrollbars, and borders, rendering with raw unstyled HTML.
-
-### How We Tackled It
-* **The Solution**: Inside the `NoteEditor.tsx` component, we wrote a `useEffect` that listens for the floating PiP window's birth.
-* When active, it directly queries the newly created window context: `(window as any).documentPictureInPicture.window`.
-* It fetches the absolute extension URL of the compiled standalone style sheet: `chrome.runtime.getURL('content.css')` (granted access via `web_accessible_resources` in `manifest.json`).
-* It appends a custom `<link rel="stylesheet">` straight into the PiP window document's `<head>`, immediately mapping all coordinates, animations, and styling.
-
----
-
-## ☀️ Challenge 5: Dynamic Theme Scoping & Window Bleeding
-### The Problem
-The floating PiP window is rendered inside a separate browser document window context, meaning it has a separate `:root` element.
-* **Roadblock 1**: The browser's default background for empty PiP windows is a dark charcoal color. If the user had the Light Theme enabled in their sidebar, the note editor elements rendered in light cream while surrounded by a thick, raw, unstyled dark browser frame margin.
-* **Roadblock 2**: The PiP window carried header titles, close actions, and saving footers which cluttered the distraction-free window.
-
-### How We Tackled It
-* **The Solution 1 (Real-time Color Sync)**: We passed the active drawer's `theme` (`light` vs `dark`) down as a React prop to `<NoteEditor>`. Inside `NoteEditor`, the PiP lifecycle `useEffect` dynamically targets the PiP window's `body` element style:
-  ```typescript
-  const themeBgColor = theme === 'dark' ? '#2E303C' : '#FFFBF0'
-  pipWindow.document.body.style.backgroundColor = themeBgColor
-  ```
-  This immediately repaints the window body background frame to match the active theme, leaving absolutely zero flash or unstyled margins.
-* **The Solution 2 (Clean Full-Bleed Viewport)**: When rendering inside the PiP window (`isInsidePip = true`), we conditionally omitted both the `<header>` and `<footer>` elements entirely. 
-* We stripped out the card borders and rounded corners, creating a **borderless, 100% full-bleed viewport** containing only the text title and description text area, yielding a minimal, distraction-free writing environment.
-
----
-
-## 🛡️ Challenge 6: Aggressive Host Page CSS Bleeding (e.g., Reddit)
-### The Problem
-When injecting the React application directly into `document.body`, the extension's UI is vulnerable to global CSS resets applied by the host page.
-* **Roadblock**: Highly styled sites like Reddit use aggressive global CSS rules (such as `box-sizing`, `margins`, or setting `div { height: 100% }`). These rules bled directly into our extension's popup launcher, stretching the drawer, misaligning elements, and destroying the carefully crafted layout.
-
-### How We Tackled It
-* **The Solution**: We migrated the entire root mount of the extension into a **Shadow DOM**. 
-* By attaching an open shadow root (`container.attachShadow({ mode: 'open' })`) and mounting our React app inside it, we created an impenetrable CSS boundary.
-* To style the UI inside this boundary, we dynamically injected our `content.css` `<link>` directly into the shadow root.
-* We updated CSS pseudo-classes (adding `:host` alongside `:root`) to ensure our global CSS variables were properly scoped. This completely isolated our extension, ensuring perfect pixel-for-pixel rendering regardless of the host website's CSS.
-
----
-
-## 📈 Summary of Engineering Triumphs
-
-| Roadblock | Security / Policy Constraint | Architectural Triumph |
-| :--- | :--- | :--- |
-| **Sandboxed Frame Blocker** | PiP blocked in popup/sidepanel frames | Injected drawer directly into host webpage DOM |
-| **Gesture Expiration Blocker** | Async boundaries destroy user gesture token | Synchronous Controlled State trigger inside DOM click handlers |
-| **Host CSP Violations** | Highly secure sites block dynamic script loads | Classic IIFE bundles with zero lazy-loaded script chunks |
-| **Isolated World Style Loss** | Extension CSS invisible to page stylesheet list | Direct absolute URL injection into `documentPictureInPicture.window` head |
-| **PiP Visual Clutter** | Double outlines, headers, footers in tiny windows | Conditional omit of headers/footers + borderless full-bleed viewports |
-| **Host CSS Bleeding** | Global resets destroy injected UI layout | Encapsulated React mount inside an isolated **Shadow DOM** |
+| Challenge | Browser Policy / Security Boundary | The Problem | How We Tackled It (Solution) |
+| :--- | :--- | :--- | :--- |
+| **1. Sandboxed Extension Frame** | Extensions block `documentPictureInPicture` in popups and side panels. | `requestWindow()` throws security exceptions in default extension frames. | Migrated the extension UI into a webpage-injected sidebar drawer panel. |
+| **2. Gesture Token Expiration** | Document PiP requires a direct, synchronous user gesture (e.g. click). | Async message passing (popup → content script) expires the user click token. | Rendered the UI directly in host DOM so user clicks act as native webpage gestures. |
+| **3. Content Security Policy (CSP)** | Secure host pages block lazy-loaded script chunks. | Dynamic chunk loading causes CSP violations on sites like GitHub/Google. | Configured Vite to bundle the content script into a single, standalone IIFE script. |
+| **4. CSS Style Sheet Isolation** | Content scripts run in isolated worlds invisible to host stylesheets. | Copying `document.styleSheets` inside PiP yields empty unstyled HTML. | Injected the extension's absolute CSS URL directly into the PiP window `<head>` on load. |
+| **5. Theme Scoping & Bleed** | Floating PiP window runs in a separate root document context. | Browser default PiP background causes unstyled margins and layout clutter. | Dynamically repainted the PiP body background and hid headers/footers for full-bleed viewport. |
+| **6. Host CSS Bleeding** | Host page global stylesheets reset/infect injected elements. | Host resets (like Reddit) break layout and alignments in the launcher. | Encapsulated the React app's mounting root inside an isolated **Shadow DOM**. |
+| **7. Server-Blind Sync Auth** | Server must validate writes without access to raw credentials or data. | Storing tokens on-server breaks the zero-knowledge privacy model. | Used HKDF to derive separate keys; verified write tokens via HMAC of a verify key. |
