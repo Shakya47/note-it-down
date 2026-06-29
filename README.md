@@ -74,47 +74,62 @@ To achieve complete privacy, the extension employs a zero-knowledge structure us
 4. **Worker Verification**: The worker verifies subsequent writes by re-computing the HMAC signature using the stored `verifyKey` and comparing it to the incoming `writeToken`. The worker is content-blind (cannot read notes) and token-blind (does not know the raw token).
 
 ```mermaid
-graph TD
-    %% Nodes
-    Token[Raw Sync Token] -->|HKDF Info: 'nid-address'| AD[address]
-    Token -->|HKDF Info: 'nid-encrypt'| EK[encryptionKey]
-    Token -->|HKDF Info: 'nid-verify'| VK[verifyKey]
-    VK -->|HMAC-SHA256 Info: 'nid-write-auth'| WT[writeToken]
+sequenceDiagram
+    autonumber
+    participant UI as Extension UI
+    participant Sync as sync.ts (Orchestrator)
+    participant Crypto as crypto.ts (WebCrypto)
+    participant Storage as storage.ts (Chrome Local)
+    participant Merge as merge.ts (Resolution)
+    participant Worker as Cloudflare Worker & KV
 
-    Notes[(Plaintext Local Notes)] -->|AES-GCM-256 + Random IV| EncBlob[Encrypted Blob]
-
-    %% Encryption Key Boundary
-    subgraph Local ["Local Extension (Zero-Knowledge Boundary)"]
-        AD
-        EK
-        VK
-        WT
-        Notes
-        EncBlob
+    UI->>Sync: User clicks 'Save & Sync'
+    
+    activate Sync
+    Sync->>Crypto: Derive address, encryptionKey, verifyKey, & writeToken
+    Crypto-->>Sync: Keys returned (derived via HKDF & HMAC-SHA256)
+    
+    Sync->>Worker: GET /v1/:address (Retrieve remote database)
+    alt Remote data exists
+        Worker-->>Sync: 200 OK with { blob, blobHash }
+        Sync->>Crypto: Decrypt remote blob using encryptionKey
+        Crypto-->>Sync: Decrypted remote notes (JSON)
+    else First-time sync (no remote data)
+        Worker-->>Sync: 404 Not Found
+        Sync->>Sync: Set isFirstWrite = true
     end
 
-    %% Network Transmission
-    EncBlob -->|Transmits| Network[GET/PUT Requests]
-    AD -->|Transmits| Network
-    WT -->|Transmits| Network
-    VK -->|Transmits First Write Only| Network
+    Sync->>Storage: Retrieve current local notes
+    Storage-->>Sync: Return local notes array
 
-    %% Worker End
-    subgraph Cloudflare ["Self-Hosted Cloudflare Worker"]
-        Network --> Worker[Relay & Auth Check]
-        Worker --> KV[(Cloudflare KV Store)]
+    Sync->>Merge: mergeNotes(local, remote)
+    Note over Merge: Deterministically merges notes by version/updatedAt (creates conflict copies on divergence).
+    Merge-->>Sync: Merged notes array returned
+
+    Sync->>Storage: Save merged notes back to browser storage
+    
+    Sync->>Crypto: Encrypt merged notes using encryptionKey (AES-GCM-256)
+    Crypto-->>Sync: Return new Encrypted Blob
+
+    Sync->>Worker: PUT /v1/:address { blob, writeToken, verifyKey?, previousHash }
+    Note over Worker: Worker validates writeToken against verifyKey and performs a Compare-and-Swap (CAS) check.
+    
+    alt 409 Conflict (Remote was updated during sync)
+        Worker-->>Sync: 409 Conflict
+        Note over Sync: Sync conflict detected! Start retry loop (Max 2 attempts)
+        Sync->>Worker: GET /v1/:address (Fetch fresh remote)
+        Worker-->>Sync: 200 OK with new { blob, blobHash }
+        Sync->>Crypto: Decrypt new remote blob
+        Sync->>Merge: Re-merge local database with new remote database
+        Sync->>Storage: Save re-merged notes
+        Sync->>Crypto: Encrypt new merged database
+        Sync->>Worker: PUT /v1/:address { new blob, writeToken, previousHash: newHash }
     end
-
-    %% Styles
-    classDef secret fill:#FF6B9D,stroke:#1A1A1A,stroke-width:2px,color:#1A1A1A;
-    classDef public fill:#06D6A0,stroke:#1A1A1A,stroke-width:2px,color:#1A1A1A;
-    classDef neutral fill:#FFD166,stroke:#1A1A1A,stroke-width:2px,color:#1A1A1A;
-    classDef storage fill:#118AB2,stroke:#1A1A1A,stroke-width:2px,color:#FFFFFF;
-
-    class EK,Token secret;
-    class AD,WT,EncBlob,VK public;
-    class Network,Worker neutral;
-    class Notes,KV storage;
+    
+    Worker-->>Sync: 200 OK (Write Successful)
+    deactivate Sync
+    
+    Sync-->>UI: Return SyncResult (success/syncedAt)
 ```
 
 ### Why Cloudflare Workers & KV?
