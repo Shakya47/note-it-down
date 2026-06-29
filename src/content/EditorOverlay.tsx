@@ -3,6 +3,7 @@ import { PipWrapper } from '@pip-it-up/react'
 import { NoteEditor } from '../components/NoteEditor'
 import { NoteList } from '../components/NoteList'
 import { useNotes } from '../hooks/useNotes'
+import { SyncSettings } from '../ui/settings/SyncSettings'
 
 interface EditorOverlayProps {
   registerToggle: (toggleFn: () => void) => void
@@ -23,6 +24,7 @@ export function EditorOverlay({ registerToggle }: EditorOverlayProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [activeTab, setActiveTab] = useState<'notes' | 'settings'>('notes')
 
   // Load saved theme on mount
   useEffect(() => {
@@ -118,7 +120,23 @@ export function EditorOverlay({ registerToggle }: EditorOverlayProps) {
           </div>
         </header>
 
-        <main className="nid-drawer-main">
+        {/* Tab Bar Navigation */}
+        <div className="nid-tab-bar">
+          <button
+            className={`nid-tab-btn ${activeTab === 'notes' ? 'nid-tab-active' : ''}`}
+            onClick={() => setActiveTab('notes')}
+          >
+            Notes
+          </button>
+          <button
+            className={`nid-tab-btn ${activeTab === 'settings' ? 'nid-tab-active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            ⚙️ Settings
+          </button>
+        </div>
+
+        <main className="nid-drawer-main" style={{ display: activeTab === 'notes' ? undefined : 'none' }}>
           {loading ? (
             <div className="nid-drawer-loading">Loading notes...</div>
           ) : (
@@ -140,6 +158,11 @@ export function EditorOverlay({ registerToggle }: EditorOverlayProps) {
               </div>
             </>
           )}
+        </main>
+        <main className="nid-drawer-main" style={{ display: activeTab === 'settings' ? undefined : 'none' }}>
+          <div className="nid-drawer-list-wrapper">
+            <SyncSettings />
+          </div>
         </main>
       </div>
 

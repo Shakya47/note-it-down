@@ -1,0 +1,187 @@
+/* SyncSettings Component Styles (CSS Module) */
+/* Uses the same un-prefixed CSS variables as NoteItem/NoteEditor for consistency */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: var(--font-family);
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 900;
+  margin: 0 0 4px 0;
+  color: var(--color-text);
+}
+
+.fieldRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-text);
+  opacity: 0.85;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-family);
+  font-size: 12px;
+  color: var(--color-text);
+  outline: none;
+  box-shadow: 2px 2px 0px var(--color-dark);
+}
+
+.input:focus {
+  border-color: var(--color-accent-blue);
+  background-color: var(--color-active-bg);
+}
+
+.input::placeholder {
+  color: var(--color-gray);
+  opacity: 0.8;
+}
+
+.tokenRow {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.tokenRow .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.genBtn {
+  padding: 8px 10px;
+  background-color: var(--color-accent-yellow);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-family);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-dark);
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--color-dark);
+  transition: transform 0.1s, box-shadow 0.1s;
+  white-space: nowrap;
+}
+
+.genBtn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--color-dark);
+}
+
+.genBtn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--color-dark);
+}
+
+.genBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.copiedBtn {
+  background-color: var(--color-accent-teal) !important;
+}
+
+.syncBtn {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--color-accent-pink);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-md);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 800;
+  color: #FFFFFF;
+  text-shadow: 1.5px 1.5px 0 var(--color-dark);
+  cursor: pointer;
+  box-shadow: var(--shadow-main);
+  transition: transform 0.1s, box-shadow 0.1s;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+.syncBtn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px var(--color-dark);
+}
+
+.syncBtn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--color-dark);
+}
+
+.syncBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inlineWarn {
+  padding: 8px 12px;
+  background-color: var(--color-delete-hover-bg);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-red);
+  box-shadow: 2px 2px 0px var(--color-dark);
+}
+
+.divider {
+  border: none;
+  border-top: 2px solid var(--color-light-gray);
+  margin: 6px 0;
+}
+
+.statusRow {
+  padding: 10px 12px;
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-md);
+  font-size: 11px;
+  box-shadow: 2px 2px 0px var(--color-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.errorRow {
+  border-color: var(--color-red);
+}
+
+.statusLabel {
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.statusOk {
+  font-weight: 900;
+  color: var(--color-accent-teal);
+}
+
+.statusErr {
+  font-weight: 900;
+  color: var(--color-red);
+}
+
+.syncTimestamp {
+  font-size: 10px;
+  color: var(--color-gray);
+  font-weight: 600;
+}
