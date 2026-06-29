@@ -62,6 +62,61 @@ import { PipWrapper } from '@pip-it-up/react'
 
 For full configuration and deployment steps, see the **[sync-worker/README.md](sync-worker/README.md)** (or absolute path **[sync-worker/README.md](file:///Users/saurabhshakya/Documents/Projects/note-it-down/sync-worker/README.md)**).
 
+### How Zero-Knowledge Cryptography Works
+
+To achieve complete privacy, the extension employs a zero-knowledge structure using WebCrypto APIs:
+1. **Deterministic Key Derivation (HKDF)**: From your single raw sync token, the extension derives three independent cryptographic values via HKDF-SHA-256 (using a fixed 32-byte zero salt):
+   - `address`: The database lookup key (used as the URL segment on the worker).
+   - `encryptionKey`: An AES-GCM 256-bit key used locally to encrypt/decrypt note database payloads.
+   - `verifyKey`: Stored on the worker during the first sync to authenticate future writes.
+2. **Write Token Derivation (HMAC)**: A `writeToken` is derived by computing an HMAC-SHA256 signature of `"nid-write-auth"` using the derived `verifyKey` bytes as the key.
+3. **Zero-Knowledge Boundary**: The client only transmits the `address`, the `writeToken`, and the encrypted `blob` (plus `verifyKey` on first write). The `encryptionKey` and the raw `token` **never leave your device**.
+4. **Worker Verification**: The worker verifies subsequent writes by re-computing the HMAC signature using the stored `verifyKey` and comparing it to the incoming `writeToken`. The worker is content-blind (cannot read notes) and token-blind (does not know the raw token).
+
+```mermaid
+graph TD
+    %% Nodes
+    Token[Raw Sync Token] -->|HKDF Info: 'nid-address'| AD[address]
+    Token -->|HKDF Info: 'nid-encrypt'| EK[encryptionKey]
+    Token -->|HKDF Info: 'nid-verify'| VK[verifyKey]
+    VK -->|HMAC-SHA256 Info: 'nid-write-auth'| WT[writeToken]
+
+    Notes[(Plaintext Local Notes)] -->|AES-GCM-256 + Random IV| EncBlob[Encrypted Blob]
+
+    %% Encryption Key Boundary
+    subgraph Local ["Local Extension (Zero-Knowledge Boundary)"]
+        AD
+        EK
+        VK
+        WT
+        Notes
+        EncBlob
+    end
+
+    %% Network Transmission
+    EncBlob -->|Transmits| Network[GET/PUT Requests]
+    AD -->|Transmits| Network
+    WT -->|Transmits| Network
+    VK -->|Transmits First Write Only| Network
+
+    %% Worker End
+    subgraph Cloudflare ["Self-Hosted Cloudflare Worker"]
+        Network --> Worker[Relay & Auth Check]
+        Worker --> KV[(Cloudflare KV Store)]
+    end
+
+    %% Styles
+    classDef secret fill:#FF6B9D,stroke:#1A1A1A,stroke-width:2px,color:#1A1A1A;
+    classDef public fill:#06D6A0,stroke:#1A1A1A,stroke-width:2px,color:#1A1A1A;
+    classDef neutral fill:#FFD166,stroke:#1A1A1A,stroke-width:2px,color:#1A1A1A;
+    classDef storage fill:#118AB2,stroke:#1A1A1A,stroke-width:2px,color:#FFFFFF;
+
+    class EK,Token secret;
+    class AD,WT,EncBlob,VK public;
+    class Network,Worker neutral;
+    class Notes,KV storage;
+```
+
 ### Why Cloudflare Workers & KV?
 Deploying your own worker provides a powerful backend with zero overhead:
 - **100% Private & Self-Hosted**: No accounts, no database hosting, and zero visibility of your notes by anyone (including Cloudflare, as all blobs are client-side encrypted).
