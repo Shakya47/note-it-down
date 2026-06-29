@@ -206,6 +206,48 @@
   color: var(--nid-color-red);
 }
 
+/* Tab Bar Navigation */
+.nid-tab-bar {
+  display: flex;
+  border-bottom: var(--nid-border-width) solid var(--nid-color-dark);
+  box-sizing: border-box;
+}
+
+.nid-tab-btn {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-family: var(--nid-font-family);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--nid-color-gray);
+  border-right: var(--nid-border-width) solid var(--nid-color-dark);
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.nid-tab-btn:last-child {
+  border-right: none;
+}
+
+.nid-tab-btn:hover {
+  background-color: var(--nid-color-light-gray);
+  color: var(--nid-color-dark);
+}
+
+.nid-tab-btn.nid-tab-active {
+  background-color: var(--nid-color-accent-teal);
+  color: var(--nid-color-dark);
+}
+
+.nid-theme-dark .nid-tab-btn.nid-tab-active {
+  background-color: var(--nid-color-accent-blue);
+  color: var(--nid-color-white);
+  text-shadow: 1px 1px 0 var(--nid-color-dark);
+}
+
 /* Main Area */
 .nid-drawer-main {
   padding: 16px;

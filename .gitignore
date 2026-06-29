@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 specs_tickets
+
+# Cloudflare Worker config and state
+sync-worker/wrangler.toml
+sync-worker/.wrangler/
+sync-worker/.dev.vars

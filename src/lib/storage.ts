@@ -46,7 +46,7 @@ export async function saveNotes(notes: Note[]): Promise<void> {
 /**
  * Adds a new note to storage
  */
-export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<Note> {
+export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version'>): Promise<Note> {
   const notes = await getNotes()
   
   const now = new Date().toISOString()
@@ -56,6 +56,7 @@ export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updated
     body: noteData.body,
     createdAt: now,
     updatedAt: now,
+    version: 1,
   }
   
   notes.push(newNote)
@@ -68,7 +69,7 @@ export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updated
  */
 export async function updateNote(
   id: string,
-  updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt'>>
+  updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version'>>
 ): Promise<Note> {
   const notes = await getNotes()
   const noteIndex = notes.findIndex((note) => note.id === id)
@@ -82,6 +83,7 @@ export async function updateNote(
     ...existingNote,
     ...updates,
     updatedAt: new Date().toISOString(),
+    version: (existingNote.version || 0) + 1,
   }
   
   notes[noteIndex] = updatedNote
