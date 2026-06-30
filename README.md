@@ -21,6 +21,7 @@ A note-taking Chrome Extension that leverages the modern **Document Picture-in-P
 5. Enable **Developer mode** in the top right corner.
 6. Click **Load unpacked** and select the `dist` folder inside this project.
 7. Pin the extension to your toolbar and click the icon to open the launcher!
+8. **Sync Layer (Optional)**: If you want to enable cross-device sync, deploy your own serverless worker by following the **[Sync Worker Deployment Instructions](sync-worker/README.md#deployment-instructions)** (or absolute path **[Sync Worker Deployment Instructions](file:///Users/saurabhshakya/Documents/Projects/note-it-down/sync-worker/README.md#deployment-instructions)**).
 
 ## 🧩 Powered by `pip-it-up`
 This extension was built to showcase how effortlessly you can wrap any React component in a native PiP window using the `@pip-it-up/react` library. 
