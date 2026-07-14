@@ -46,7 +46,7 @@ export async function saveNotes(notes: Note[]): Promise<void> {
 /**
  * Adds a new note to storage
  */
-export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version'>): Promise<Note> {
+export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'deleted'>): Promise<Note> {
   const notes = await getNotes()
   
   const now = new Date().toISOString()
@@ -69,7 +69,7 @@ export async function addNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updated
  */
 export async function updateNote(
   id: string,
-  updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version'>>
+  updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'deleted'>>
 ): Promise<Note> {
   const notes = await getNotes()
   const noteIndex = notes.findIndex((note) => note.id === id)
@@ -96,6 +96,19 @@ export async function updateNote(
  */
 export async function deleteNote(id: string): Promise<void> {
   const notes = await getNotes()
-  const filteredNotes = notes.filter((note) => note.id !== id)
-  await saveNotes(filteredNotes)
+  const noteIndex = notes.findIndex((note) => note.id === id)
+  
+  if (noteIndex !== -1) {
+    const existingNote = notes[noteIndex]
+    notes[noteIndex] = {
+      id: existingNote.id,
+      title: '',
+      body: '',
+      createdAt: existingNote.createdAt,
+      updatedAt: new Date().toISOString(),
+      version: (existingNote.version || 0) + 1,
+      deleted: true,
+    }
+    await saveNotes(notes)
+  }
 }

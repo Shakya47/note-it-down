@@ -48,13 +48,13 @@ export function useNotes() {
 
   // Memoize sorted notes: sorted by updatedAt descending
   const sortedNotes = useMemo(() => {
-    return [...notes].sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
+    return notes
+      .filter((note) => !note.deleted)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   }, [notes])
 
   // Create note
-  const handleAddNote = useCallback(async (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleAddNote = useCallback(async (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'deleted'>) => {
     const newNote = await addNote(noteData)
     // Always update local state immediately to avoid race conditions with chrome.storage.onChanged
     setNotes((prev) => {
@@ -66,7 +66,7 @@ export function useNotes() {
 
   // Update note
   const handleUpdateNote = useCallback(
-    async (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    async (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'deleted'>>) => {
       const updatedNote = await updateNote(id, updates)
       // Always update local state immediately to avoid race conditions
       setNotes((prev) => prev.map((n) => (n.id === id ? updatedNote : n)))
@@ -79,7 +79,7 @@ export function useNotes() {
   const handleDeleteNote = useCallback(async (id: string) => {
     await deleteNote(id)
     // Always update local state immediately to avoid race conditions
-    setNotes((prev) => prev.filter((n) => n.id !== id))
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, deleted: true } : n)))
   }, [])
 
 

@@ -92,17 +92,28 @@ export async function sync(serverUrl: string, token: string): Promise<SyncResult
       // 5. Merge
       const merged = mergeNotes(localNotes, remoteNotes);
 
-      // 6. Save merged
+      // 5b. Tombstone garbage collection — permanently remove soft-deleted
+      // notes older than 30 days. By this point all devices should have
+      // synced and received the deletion tombstone.
+      const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+      const now = Date.now();
+      const cleaned = merged.filter(
+        (note) =>
+          !note.deleted ||
+          now - new Date(note.updatedAt).getTime() < TOMBSTONE_TTL_MS
+      );
+
+      // 6. Save cleaned
       try {
-        await saveNotes(merged);
+        await saveNotes(cleaned);
       } catch (e: any) {
         return { success: false, error: `Local storage save error: ${e.message}` };
       }
 
-      // 7. Encrypt merged
+      // 7. Encrypt cleaned
       let encryptedBlob: string;
       try {
-        encryptedBlob = await encrypt(JSON.stringify(merged), encryptionKey);
+        encryptedBlob = await encrypt(JSON.stringify(cleaned), encryptionKey);
       } catch (e: any) {
         return { success: false, error: `Encryption failed: ${e.message}` };
       }
