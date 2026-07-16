@@ -9,17 +9,24 @@ const isChromeExtension = typeof chrome !== 'undefined' && chrome.storage?.local
  * Retrieves the list of notes from storage (Chrome local storage or localStorage fallback)
  */
 export async function getNotes(): Promise<Note[]> {
+  const sanitize = (notes: Note[]) =>
+    notes.map((note) =>
+      note.deleted && (note.title !== '' || note.body !== '')
+        ? { ...note, deleted: undefined }
+        : note
+    )
+
   if (isChromeExtension) {
     return new Promise((resolve) => {
       chrome.storage.local.get([STORAGE_KEY], (result) => {
         const notes = result[STORAGE_KEY] as Note[] | undefined
-        resolve(notes || [])
+        resolve(sanitize(notes || []))
       })
     })
   } else {
     try {
       const data = localStorage.getItem(STORAGE_KEY)
-      return data ? (JSON.parse(data) as Note[]) : []
+      return data ? sanitize(JSON.parse(data) as Note[]) : []
     } catch (e) {
       return []
     }
@@ -84,6 +91,7 @@ export async function updateNote(
     ...updates,
     updatedAt: new Date().toISOString(),
     version: (existingNote.version || 0) + 1,
+    deleted: undefined,
   }
   
   notes[noteIndex] = updatedNote

@@ -16,14 +16,21 @@ import type { Note } from '../types';
 export function mergeNotes(localNotes: Note[], remoteNotes: Note[]): Note[] {
   const result: Note[] = [];
 
+  const sanitizeNote = (note: Note): Note => {
+    if (note.deleted && (note.title !== '' || note.body !== '')) {
+      return { ...note, deleted: undefined };
+    }
+    return note;
+  };
+
   const localMap = new Map<string, Note>();
   for (const note of localNotes) {
-    localMap.set(note.id, note);
+    localMap.set(note.id, sanitizeNote(note));
   }
 
   const remoteMap = new Map<string, Note>();
   for (const note of remoteNotes) {
-    remoteMap.set(note.id, note);
+    remoteMap.set(note.id, sanitizeNote(note));
   }
 
   const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
