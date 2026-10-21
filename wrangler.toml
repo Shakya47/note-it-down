@@ -1,0 +1,28 @@
+# Cloudflare Worker for Note It Down sync + the phone app.
+# Deploy with `pnpm run deploy`, or use the "Deploy to Cloudflare" button in the README.
+# Nothing here is secret: each person deploys this to their own Cloudflare account.
+name = "note-it-down-sync"
+main = "sync-worker/worker.js"
+compatibility_date = "2025-06-01"
+# Keep variables set in the Cloudflare dashboard (e.g. ALLOWED_ADDRESSES) across deploys.
+keep_vars = true
+
+# The phone app (built by `pnpm build:web`) is served from the same URL as the
+# sync API. Requests for /v1/... fall through to the worker code.
+[assets]
+directory = "sync-worker/public"
+
+# Notes are stored in a SQLite-backed Durable Object (one per sync ID).
+[[durable_objects.bindings]]
+name = "NOTES_STORE"
+class_name = "NotesStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["NotesStore"]
+
+# Upgrading from the old KV-based worker? Uncomment this with your KV namespace
+# id, deploy, let each device sync once, then remove it again.
+# [[kv_namespaces]]
+# binding = "NOTES_KV"
+# id = "YOUR_KV_NAMESPACE_ID"
