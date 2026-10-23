@@ -24,7 +24,7 @@ export function NoteList({ notes, onNoteClick, onNoteDelete, activeNoteId = null
   }
 
   return (
-    <div className={styles.noteList}>
+    <ul className={styles.noteList} aria-label="Notes">
       {notes.map((note) => (
         <NoteItem
           key={note.id}
@@ -34,6 +34,6 @@ export function NoteList({ notes, onNoteClick, onNoteDelete, activeNoteId = null
           isActive={note.id === activeNoteId}
         />
       ))}
-    </div>
+    </ul>
   )
 }

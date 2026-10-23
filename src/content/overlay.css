@@ -1,5 +1,5 @@
 /* Note It Down — Content Script Overlay Styles */
-/* These styles are injected into the host page for the editor overlay. */
+/* Inlined into the overlay's shadow root and the PiP window (see content/styles.ts). */
 
 /* Design tokens supporting light and dark modes */
 :root, :host {
@@ -18,7 +18,7 @@
   --nid-color-active-bg: #EBF8FF;
   --nid-color-delete-hover-bg: #FFEAEF;
 
-  --nid-font-family: 'Fredoka', 'Nunito', system-ui, -apple-system, sans-serif;
+  --nid-font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --nid-border-width: 3px;
   --nid-border-radius-lg: 18px;
   --nid-border-radius-md: 12px;
@@ -248,7 +248,47 @@
   text-shadow: 1px 1px 0 var(--nid-color-dark);
 }
 
+/* Inline alert (errors, extension reloaded) */
+.nid-drawer-alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--nid-color-delete-hover-bg);
+  border-bottom: var(--nid-border-width) solid var(--nid-color-dark);
+  font-family: var(--nid-font-family);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--nid-color-red);
+}
+
+.nid-drawer-alert-dismiss {
+  background: transparent;
+  border: none;
+  font-weight: 900;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+/* Visible keyboard focus inside the drawer */
+.nid-drawer-panel button:focus-visible,
+.nid-drawer-panel a:focus-visible {
+  outline: 3px solid var(--nid-color-accent-blue);
+  outline-offset: 2px;
+}
+
+.nid-drawer-new-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Main Area */
+.nid-drawer-main[hidden] {
+  display: none;
+}
+
 .nid-drawer-main {
   padding: 16px;
   display: flex;
@@ -353,4 +393,14 @@
   50% {
     transform: translateY(-6px) rotate(4deg);
   }
+}
+/* The editor lives in the PiP window while it is open; keep no gap in the drawer. */
+.nid-pip-placeholder {
+  display: none !important;
+}
+
+/* Collapse the editor slot when no editor is shown in the drawer (none open,
+   or it is in the PiP window), so it adds no gap. */
+.nid-editor-slot:not(:has(.nid-overlay-root)) {
+  display: none;
 }
