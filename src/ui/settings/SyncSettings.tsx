@@ -1,245 +1,305 @@
 import { useState, useEffect } from 'react';
-import { generateToken } from '../../sync/crypto';
-import { sync } from '../../sync/sync';
+import { deriveKeys, generateToken } from '../../sync/crypto';
+import { isStrongToken, normalizeServerUrl } from '../../sync/config';
+import { STORAGE_KEYS } from '../../lib/messages';
+import { sendToBackground } from '../../lib/notesClient';
+import { errorMessage } from '../../lib/notes';
+import { formatTimestamp, useSyncStatus } from './useSyncStatus';
 import styles from './SyncSettings.module.css';
 
+type Busy = null | 'save' | 'disconnect' | 'delete';
+type Message = { kind: 'ok' | 'warn' | 'error'; text: string } | null;
+
+const formatSyncId = (address: string) => `${address.slice(0, 4)}-${address.slice(4, 8)}`.toUpperCase();
+
+/** Sync configuration. Rendered only on the extension options page, never inside websites. */
 export function SyncSettings() {
   const [serverUrl, setServerUrl] = useState('');
   const [token, setToken] = useState('');
-  const [lastSynced, setLastSynced] = useState<string | null>(null);
-  const [lastStatus, setLastStatus] = useState<'success' | 'error' | null>(null);
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [showNoConfigWarning, setShowNoConfigWarning] = useState(false);
+  const [savedToken, setSavedToken] = useState<string | null>(null);
+  const [showToken, setShowToken] = useState(false);
+  const [derived, setDerived] = useState<{ token: string; address: string } | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
+  const [message, setMessage] = useState<Message>(null);
   const [copied, setCopied] = useState(false);
+  const status = useSyncStatus();
 
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      chrome.storage.local.get(
-        [
-          'nid-sync-server-url',
-          'nid-sync-token',
-          'nid-sync-last-synced',
-          'nid-sync-last-status',
-          'nid-sync-last-error',
-        ],
-        (result) => {
-          setServerUrl((result['nid-sync-server-url'] as string) || '');
-          setToken((result['nid-sync-token'] as string) || '');
-          setLastSynced((result['nid-sync-last-synced'] as string) || null);
-          setLastStatus((result['nid-sync-last-status'] as 'success' | 'error' | null) || null);
-          setLastError((result['nid-sync-last-error'] as string) || null);
-        }
-      );
-    } else {
-      setServerUrl(localStorage.getItem('nid-sync-server-url') || '');
-      setToken(localStorage.getItem('nid-sync-token') || '');
-      setLastSynced(localStorage.getItem('nid-sync-last-synced') || null);
-      setLastStatus((localStorage.getItem('nid-sync-last-status') as 'success' | 'error' | null) || null);
-      setLastError(localStorage.getItem('nid-sync-last-error') || null);
-    }
+    chrome.storage.local.get([STORAGE_KEYS.serverUrl, STORAGE_KEYS.token]).then((result) => {
+      const url = result[STORAGE_KEYS.serverUrl];
+      const saved = result[STORAGE_KEYS.token];
+      setServerUrl(typeof url === 'string' ? url : '');
+      setToken(typeof saved === 'string' ? saved : '');
+      setSavedToken(typeof saved === 'string' && saved ? saved : null);
+    });
   }, []);
 
+  // The Sync ID is a fingerprint of the token: it must match on every device.
+  const trimmedToken = token.trim();
+  useEffect(() => {
+    if (!isStrongToken(trimmedToken)) return;
+    let cancelled = false;
+    deriveKeys(trimmedToken).then((keys) => {
+      if (!cancelled) setDerived({ token: trimmedToken, address: keys.address });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [trimmedToken]);
+  const address = derived?.token === trimmedToken ? derived.address : null;
+
   const handleGenerateToken = () => {
-    const newToken = generateToken();
-    setToken(newToken);
+    if (
+      trimmedToken &&
+      !confirm(
+        'Replace the current token?\n\nA new token creates a separate, empty sync space. Your other devices will stop syncing with this one until you paste the new token on them too.'
+      )
+    ) {
+      return;
+    }
+    setToken(generateToken());
+    setShowToken(true);
     setCopied(false);
   };
 
   const handleCopyToken = async () => {
-    if (!token) return;
+    if (!trimmedToken) return;
     try {
-      await navigator.clipboard.writeText(token);
+      await navigator.clipboard.writeText(trimmedToken);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for environments where clipboard API isn't available
-      const textArea = document.createElement('textarea');
-      textArea.value = token;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      setMessage({ kind: 'error', text: `Couldn't copy: ${errorMessage(e)}` });
     }
   };
 
   const handleSaveAndSync = async () => {
-    const trimmedUrl = serverUrl.trim();
-    const trimmedToken = token.trim();
-
-    if (!trimmedUrl || !trimmedToken) {
-      setShowNoConfigWarning(true);
+    setMessage(null);
+    try {
+      normalizeServerUrl(serverUrl);
+    } catch (e) {
+      setMessage({ kind: 'error', text: errorMessage(e) });
       return;
     }
-    setShowNoConfigWarning(false);
-    setIsSyncing(true);
-
-    // Save URL & Token
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      await new Promise<void>((resolve) => {
-        chrome.storage.local.set(
-          {
-            'nid-sync-server-url': trimmedUrl,
-            'nid-sync-token': trimmedToken,
-          },
-          resolve
-        );
+    if (!isStrongToken(trimmedToken)) {
+      setMessage({
+        kind: 'error',
+        text: 'Use a token generated by Note It Down: click Generate on your first device, then paste the same token on the others.',
       });
-    } else {
-      localStorage.setItem('nid-sync-server-url', trimmedUrl);
-      localStorage.setItem('nid-sync-token', trimmedToken);
+      return;
     }
 
-    // Call sync
-    const result = await sync(trimmedUrl, trimmedToken);
-
-    setIsSyncing(false);
-    const now = new Date().toISOString();
-    const status = result.success ? 'success' : 'error';
-    const errorMsg = result.error || null;
-
-    setLastStatus(status);
-    setLastError(errorMsg);
-    if (result.success) {
-      setLastSynced(now);
-    }
-
-    // Save results
-    const updateObj: any = {
-      'nid-sync-last-status': status,
-      'nid-sync-last-error': errorMsg,
-    };
-    if (result.success) {
-      updateObj['nid-sync-last-synced'] = now;
-    }
-
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      chrome.storage.local.set(updateObj);
-    } else {
-      localStorage.setItem('nid-sync-last-status', status);
-      localStorage.setItem('nid-sync-last-error', errorMsg || '');
-      if (result.success) {
-        localStorage.setItem('nid-sync-last-synced', now);
-      }
-    }
-  };
-
-  const formatTimestamp = (isoStr: string | null) => {
-    if (!isoStr) return '—';
+    setBusy('save');
     try {
-      const date = new Date(isoStr);
-      return date.toLocaleString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoStr;
+      const result = await sendToBackground({ type: 'sync:configure', serverUrl, token: trimmedToken });
+      setSavedToken(trimmedToken);
+      if (!result.sync.success) {
+        setMessage({ kind: 'error', text: `Saved, but sync failed: ${result.sync.error}` });
+      } else if (result.worker === 'legacy') {
+        setMessage({
+          kind: 'warn',
+          text: 'Synced. Your worker is an older version without conflict-safe writes; redeploy it from the sync-worker guide.',
+        });
+      } else {
+        setMessage({ kind: 'ok', text: 'Saved. This device now syncs automatically.' });
+      }
+    } catch (e) {
+      setMessage({ kind: 'error', text: errorMessage(e) });
+    } finally {
+      setBusy(null);
     }
   };
+
+  const clearForm = () => {
+    setServerUrl('');
+    setToken('');
+    setSavedToken(null);
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm('Stop syncing this device? Your notes stay on this device and on the server.')) return;
+    setBusy('disconnect');
+    setMessage(null);
+    try {
+      await sendToBackground({ type: 'sync:disconnect' });
+      clearForm();
+      setMessage({ kind: 'ok', text: 'This device is no longer syncing.' });
+    } catch (e) {
+      setMessage({ kind: 'error', text: errorMessage(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDeleteRemote = async () => {
+    if (
+      !confirm(
+        'Permanently delete your encrypted notes from the worker and disconnect this device?\n\nNotes on your devices are not deleted. Any other device still using this token will upload its notes again the next time it syncs.'
+      )
+    ) {
+      return;
+    }
+    setBusy('delete');
+    setMessage(null);
+    try {
+      await sendToBackground({ type: 'sync:deleteRemote' });
+      clearForm();
+      setMessage({ kind: 'ok', text: 'Server data deleted and this device disconnected.' });
+    } catch (e) {
+      setMessage({ kind: 'error', text: errorMessage(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const disabled = busy !== null;
 
   return (
     <div className={styles.container}>
       <h2 className={styles.sectionTitle}>☁️ Sync (Optional)</h2>
+      <p className={styles.helpText}>
+        Notes are encrypted on this device before upload. Once connected, this device syncs automatically every few
+        minutes and shortly after each edit.
+      </p>
 
       <div className={styles.fieldRow}>
-        <label className={styles.fieldLabel}>Worker URL</label>
+        <label className={styles.fieldLabel} htmlFor="nid-server-url">Worker URL</label>
         <input
+          id="nid-server-url"
           className={styles.input}
-          type="text"
+          type="url"
           placeholder="https://your-worker.workers.dev"
           value={serverUrl}
           onChange={(e) => setServerUrl(e.target.value)}
-          disabled={isSyncing}
+          disabled={disabled}
+          autoComplete="off"
+          spellCheck={false}
           data-element-id="server-url-input"
         />
       </div>
 
       <div className={styles.fieldRow}>
-        <label className={styles.fieldLabel}>Sync Token</label>
+        <label className={styles.fieldLabel} htmlFor="nid-sync-token">Sync Token</label>
         <div className={styles.tokenRow}>
           <input
+            id="nid-sync-token"
             className={styles.input}
-            type="text"
-            placeholder="Click Generate to create a token"
+            type={showToken ? 'text' : 'password'}
+            placeholder="Generate on your first device, paste on the others"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            disabled={isSyncing}
+            disabled={disabled}
+            autoComplete="off"
+            spellCheck={false}
             data-element-id="token-input"
           />
           <button
             className={styles.genBtn}
-            onClick={handleGenerateToken}
-            disabled={isSyncing}
-            data-element-id="generate-token-btn"
+            onClick={() => setShowToken((v) => !v)}
+            disabled={disabled || !token}
+            aria-pressed={showToken}
           >
-            Generate
+            {showToken ? 'Hide' : 'Show'}
           </button>
           <button
             className={`${styles.genBtn} ${copied ? styles.copiedBtn : ''}`}
             onClick={handleCopyToken}
-            disabled={isSyncing || !token}
+            disabled={disabled || !token}
             data-element-id="copy-token-btn"
           >
             {copied ? '✓ Copied' : 'Copy'}
           </button>
+          <button
+            className={styles.genBtn}
+            onClick={handleGenerateToken}
+            disabled={disabled}
+            data-element-id="generate-token-btn"
+          >
+            Generate
+          </button>
         </div>
+        {address ? (
+          <div className={styles.syncTimestamp}>
+            Sync ID: <strong className={styles.syncId}>{formatSyncId(address)}</strong> — must be the same on all your
+            devices.
+          </div>
+        ) : (
+          trimmedToken && <div className={styles.syncTimestamp}>Not a generated token.</div>
+        )}
       </div>
 
-      {showNoConfigWarning && (
-        <div className={styles.inlineWarn} data-element-id="no-config-warning">
-          ⚠️ Please configure a Worker URL and Token. See the{' '}
-          <a
-            href="https://github.com/Shakya47/note-it-down/blob/main/sync-worker/README.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: 'underline', color: 'inherit' }}
-          >
-            deploy instructions
-          </a>{' '}
-          to set up your own worker.
+      {savedToken && !isStrongToken(savedToken) && (
+        <div className={styles.inlineWarn} role="alert">
+          ⚠️ The saved token wasn't generated by Note It Down and may be guessable. Generate a new one here, save, and
+          paste it on your other devices.
         </div>
       )}
 
-      <button
-        className={styles.syncBtn}
-        onClick={handleSaveAndSync}
-        disabled={isSyncing}
-        data-element-id="save-sync-btn"
-      >
-        {isSyncing ? 'Syncing...' : 'Save & Sync'}
+      <p className={styles.helpText}>
+        Need a worker? See the{' '}
+        <a
+          href="https://github.com/Shakya47/note-it-down/blob/main/sync-worker/README.md"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          deploy instructions
+        </a>
+        .
+      </p>
+
+      <button className={styles.syncBtn} onClick={handleSaveAndSync} disabled={disabled} data-element-id="save-sync-btn">
+        {busy === 'save' ? 'Syncing...' : 'Save & Sync'}
       </button>
+
+      {message && (
+        <div
+          className={message.kind === 'error' ? styles.inlineWarn : message.kind === 'warn' ? styles.inlineNote : styles.inlineOk}
+          role={message.kind === 'ok' ? 'status' : 'alert'}
+        >
+          {message.text}
+        </div>
+      )}
 
       <hr className={styles.divider} />
 
-      {lastStatus && (
+      {status.configured && (
         <div className={styles.statusRow}>
           <div className={styles.statusLabel}>Last Sync Status</div>
-          {lastStatus === 'success' ? (
-            <div className={styles.statusOk} data-element-id="sync-status">
-              ✅ Synced successfully
-            </div>
+          {status.lastStatus === 'error' ? (
+            <div className={styles.statusErr} data-element-id="sync-status">❌ Sync Failed</div>
+          ) : status.lastStatus === 'success' ? (
+            <div className={styles.statusOk} data-element-id="sync-status">✅ Synced successfully</div>
           ) : (
-            <div className={styles.statusErr} data-element-id="sync-status">
-              ❌ Sync Failed
-            </div>
+            <div className={styles.syncTimestamp}>Not synced yet</div>
           )}
+          {status.pending && <div className={styles.pendingText}>• Unsynced changes on this device</div>}
           <div className={styles.syncTimestamp} data-element-id="sync-timestamp">
-            Last synced: {formatTimestamp(lastSynced)}
+            Last synced: {formatTimestamp(status.lastSynced)}
           </div>
+          {status.lastStatus === 'error' && status.lastError && (
+            <div className={styles.statusErr} data-element-id="sync-error-msg">{status.lastError}</div>
+          )}
         </div>
       )}
 
-      {lastStatus === 'error' && lastError && (
-        <div className={`${styles.statusRow} ${styles.errorRow}`} data-element-id="error-row">
-          <div className={styles.statusLabel}>Error Detail</div>
-          <div className={styles.statusErr} data-element-id="sync-error-msg">
-            {lastError}
-          </div>
+      {address && (
+        <details className={styles.details}>
+          <summary>Advanced</summary>
+          <p className={styles.helpText}>
+            Full sync ID (use it in the worker's optional <code>ALLOWED_ADDRESSES</code> setting):
+          </p>
+          <code className={styles.fullAddress}>{address}</code>
+        </details>
+      )}
+
+      {status.configured && (
+        <div className={styles.dangerZone}>
+          <button className={styles.genBtn} onClick={handleDisconnect} disabled={disabled}>
+            {busy === 'disconnect' ? 'Disconnecting...' : 'Disconnect this device'}
+          </button>
+          <button className={styles.dangerBtn} onClick={handleDeleteRemote} disabled={disabled}>
+            {busy === 'delete' ? 'Deleting...' : 'Delete server data'}
+          </button>
         </div>
       )}
     </div>
