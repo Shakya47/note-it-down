@@ -1,0 +1,183 @@
+/* Web app layout. Colours and components come from src/content/overlay.css,
+   so the app looks the same as the extension drawer. */
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: #FFFBF0;
+  overscroll-behavior-y: none;
+}
+
+body.nid-theme-dark {
+  background-color: #2E303C;
+}
+
+#root {
+  min-height: 100%;
+}
+
+.nid-web {
+  min-height: 100dvh;
+  background-color: var(--nid-color-bg);
+  font-family: var(--nid-font-family);
+  color: var(--nid-color-text);
+}
+
+.nid-web-page {
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.nid-web-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  gap: 8px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+}
+
+.nid-web-header .nid-drawer-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nid-web-header-spacer {
+  width: 36px;
+}
+
+.nid-web-back {
+  width: 36px;
+  height: 36px;
+  border: var(--nid-border-width) solid var(--nid-color-dark);
+  border-radius: 50%;
+  background-color: var(--nid-color-white);
+  color: var(--nid-color-text);
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 1.5px 1.5px 0 var(--nid-color-dark);
+}
+
+.nid-web .nid-drawer-avatar-btn {
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+}
+
+.nid-web-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.nid-web-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: var(--nid-border-width) solid var(--nid-color-dark);
+  border-radius: var(--nid-border-radius-md);
+  background-color: var(--nid-color-white);
+  color: var(--nid-color-text);
+  font-family: var(--nid-font-family);
+  box-shadow: 2px 2px 0 var(--nid-color-dark);
+  outline: none;
+}
+
+.nid-web-search:focus {
+  border-color: var(--nid-color-accent-blue);
+}
+
+.nid-web-setup {
+  text-align: left;
+  padding: 10px 14px;
+  border: var(--nid-border-width) solid var(--nid-color-dark);
+  border-radius: var(--nid-border-radius-md);
+  background-color: var(--nid-color-accent-yellow);
+  color: #1A1A1A;
+  font-family: var(--nid-font-family);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--nid-color-dark);
+}
+
+.nid-web-empty {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--nid-color-gray);
+  font-weight: 700;
+}
+
+/* Sync status pill in the header */
+.nid-web-pill {
+  height: 30px;
+  padding: 0 10px;
+  border: 2px solid var(--nid-color-dark);
+  border-radius: 999px;
+  font-family: var(--nid-font-family);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #1A1A1A;
+  background-color: var(--nid-color-white);
+}
+
+.nid-web-pill-ok {
+  background-color: var(--nid-color-accent-teal);
+}
+
+.nid-web-pill-busy {
+  background-color: #FFFFFF;
+}
+
+.nid-web-pill-warn {
+  background-color: #FFE8A3;
+}
+
+.nid-web-pill-error {
+  background-color: var(--nid-color-red);
+  color: #FFFFFF;
+}
+
+/* Full-screen editor */
+.nid-web-editor {
+  height: 100dvh;
+  max-width: 640px;
+  margin: 0 auto;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+}
+
+/* Larger touch targets in the list */
+.nid-web .nid-drawer-new-btn {
+  padding: 12px;
+}
+
+/* Safari gives form controls their own font; use the app font everywhere. */
+.nid-web button,
+.nid-web input,
+.nid-web textarea {
+  font-family: var(--nid-font-family);
+}
+
+/* iOS zooms into inputs smaller than 16px; keep everything at 16px or more. */
+.nid-web textarea,
+.nid-web input:not([aria-label='Note title']) {
+  font-size: 16px !important;
+}
