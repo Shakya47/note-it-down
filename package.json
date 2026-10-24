@@ -1,17 +1,20 @@
 {
   "name": "note-it-down",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --config vite.content.config.ts --watch & vite",
+    "dev": "node scripts/dev.mjs",
     "build": "tsc -b && vite build --config vite.content.config.ts && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "test": "vitest run",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build:web": "tsc -b && vite build --config web/vite.config.ts",
+    "deploy": "pnpm build:web && wrangler deploy"
   },
   "dependencies": {
-    "@pip-it-up/core": "0.1.9",
-    "@pip-it-up/react": "0.1.9",
+    "@pip-it-up/core": "0.3.0",
+    "@pip-it-up/react": "0.3.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
@@ -29,6 +32,15 @@
     "globals": "^17.6.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.152.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "NOTES_STORE": {
+        "description": "Stores each person's encrypted notes, one Durable Object per sync ID. Created automatically; nothing to fill in."
+      }
+    }
   }
 }

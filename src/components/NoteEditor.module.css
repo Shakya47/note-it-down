@@ -1,6 +1,10 @@
 /* NoteEditor Component Styles (CSS Module) */
 
 .editorContainer {
+  /* One type scale for the editor; the page layout scales it up. */
+  --note-title-size: 17px;
+  --note-body-size: 14px;
+
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg);
@@ -10,15 +14,20 @@
   height: 100%;
   width: 100%;
   box-sizing: border-box;
+  font-family: var(--font-family);
+  color: var(--color-text);
 }
 
+/* Header: title and actions */
 .editorHeader {
   background-color: var(--color-accent-teal);
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   border-bottom: var(--border-width) solid var(--color-dark);
+  flex-shrink: 0;
 }
 
 .headerText {
@@ -27,135 +36,94 @@
   color: var(--color-dark);
 }
 
-.pipBtn {
+.headerGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerBtn {
+  min-width: 30px;
   padding: 4px 10px;
   background-color: var(--color-white);
   border: 2px solid var(--color-dark);
   border-radius: var(--border-radius-sm);
   font-family: var(--font-family);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   box-shadow: 2px 2px 0px var(--color-dark);
   transition: transform 0.1s, box-shadow 0.1s;
-  color: var(--color-dark);
+  color: var(--color-text);
 }
 
-.pipBtn:hover {
+.headerBtn:hover {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0px var(--color-dark);
 }
 
-.pipBtn:active {
+.headerBtn:active {
   transform: translate(1px, 1px);
   box-shadow: 1px 1px 0px var(--color-dark);
 }
 
+.headerBtn:focus-visible {
+  outline: 3px solid var(--color-accent-blue);
+  outline-offset: 2px;
+}
+
+/* Editing */
 .titleInput {
   width: 100%;
+  margin: 0;
   padding: 12px 14px 8px;
   font-family: var(--font-family);
-  font-size: 18px;
-  font-weight: 900;
-  border: none;
-  background: transparent;
-  outline: none;
+  font-size: var(--note-title-size);
+  font-weight: 800;
+  line-height: 1.3;
   color: var(--color-text);
   box-sizing: border-box;
 }
 
-.titleInput::placeholder {
-  color: var(--color-gray);
-  opacity: 0.8;
+.titleInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .divider {
   height: 2px;
   background-color: var(--color-light-gray);
   margin: 0 14px;
+  flex-shrink: 0;
 }
 
 .bodyTextarea {
   flex-grow: 1;
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 14px 16px;
   font-family: var(--font-family);
-  font-size: 13px;
+  font-size: var(--note-body-size);
   line-height: 1.6;
+  color: var(--color-text);
+  box-sizing: border-box;
   border: none;
   background: transparent;
   outline: none;
   resize: none;
-  color: var(--color-text);
-  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
+.titleInput::placeholder,
 .bodyTextarea::placeholder {
   color: var(--color-gray);
   opacity: 0.8;
 }
 
-.editorFooter {
-  padding: 8px 14px;
-  border-top: 2px solid var(--color-light-gray);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--color-white);
-}
-
-.saveStatus {
-  font-size: 11px;
-  color: var(--color-gray);
-  font-weight: 700;
-}
-
-.deleteBtn {
-  padding: 4px 10px;
-  background-color: #FFE0E0;
-  border: 2px solid var(--color-dark);
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-family);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 2px 2px 0px var(--color-dark);
-  transition: transform 0.1s, box-shadow 0.1s;
-  color: var(--color-dark);
-}
-
-.deleteBtn:hover {
-  background-color: #FFAEAE;
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px var(--color-dark);
-}
-
-.deleteBtn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px var(--color-dark);
-}
-
-/* Custom placeholder layout */
-.placeholderWrapper {
-  max-width: 100% !important;
-}
-
-.placeholderContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #EBF8FF;
-  border: var(--border-width) dashed var(--color-accent-blue);
-  border-radius: var(--border-radius-lg);
-  padding: 16px;
-  height: 100%;
-  box-sizing: border-box;
-  text-align: center;
-  gap: 8px;
-}
-
-/* Loading container inside editor */
+/* Loading */
 .loadingContainer {
   display: flex;
   flex-direction: column;
@@ -163,7 +131,6 @@
   justify-content: center;
   height: 100%;
   width: 100%;
-  background-color: var(--color-bg);
   padding: 24px;
   box-sizing: border-box;
   text-align: center;
@@ -172,64 +139,40 @@
 
 .loadingEmoji {
   font-size: 36px;
-  animation: float 1.5s ease-in-out infinite;
 }
 
 .loadingText {
   font-size: 14px;
   font-weight: 800;
-  color: var(--color-dark);
 }
 
-.placeholderEmoji {
-  font-size: 32px;
-  animation: float 3s ease-in-out infinite;
-}
-
-.placeholderText {
+.banner {
+  padding: 8px 12px;
+  background-color: var(--color-delete-hover-bg);
+  border-bottom: var(--border-width) solid var(--color-dark);
   font-size: 12px;
-  font-weight: 800;
-  color: var(--color-accent-blue);
+  font-weight: 700;
+  color: var(--color-red);
+  flex-shrink: 0;
 }
 
-.restoreBtn {
-  padding: 4px 10px;
-  background-color: var(--color-white);
-  border: 2px solid var(--color-dark);
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-family);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 2px 2px 0px var(--color-dark);
-  transition: transform 0.1s, box-shadow 0.1s;
-  color: var(--color-dark);
-}
-
-.restoreBtn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px var(--color-dark);
-}
-
-.restoreBtn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px var(--color-dark);
-}
-
-/* Float animation keyframes if not defined globally */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-6px) rotate(4deg);
-  }
-}
-
-/* Stripped boundary dimensions and borders for clean PiP display */
+/* Layouts */
 .pipModeContainer {
   border: none !important;
   border-radius: 0 !important;
   height: 100vh !important;
   width: 100vw !important;
+}
+
+.inlineContainer {
+  height: 320px;
+  flex-shrink: 0;
+}
+
+.pageContainer {
+  --note-title-size: 22px;
+  --note-body-size: 16px;
+  height: 100%;
+  border: none;
+  border-radius: 0;
 }

@@ -162,6 +162,6 @@ export async function decrypt(blob: string, key: CryptoKey): Promise<string> {
 
     return new TextDecoder().decode(decrypted);
   } catch (error) {
-    throw new Error('Decryption failed: data may be tampered or key is incorrect');
+    throw new Error('Decryption failed: data may be tampered or key is incorrect', { cause: error });
   }
 }

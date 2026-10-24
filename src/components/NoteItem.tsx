@@ -10,17 +10,14 @@ interface NoteItemProps {
 
 export function NoteItem({ note, onClick, onDelete, isActive = false }: NoteItemProps) {
   const formatDate = (isoString: string) => {
-    try {
-      const date = new Date(isoString)
-      return date.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return 'Recent'
-    }
+    const date = new Date(isoString)
+    if (Number.isNaN(date.getTime())) return 'Recent'
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
   const getBodyPreview = (bodyText: string) => {
@@ -29,22 +26,29 @@ export function NoteItem({ note, onClick, onDelete, isActive = false }: NoteItem
     return firstLine || 'Empty note content'
   }
 
+  const title = note.title || 'Untitled note'
+
   return (
-    <div className={`${styles.noteItem} ${isActive ? styles.active : ''}`} onClick={onClick}>
-      <div className={styles.noteItemHeader}>
-        <span className={styles.noteTitle}>
-          {note.title || 'Untitled note'}
-        </span>
-        <button
-          className={styles.deleteBtn}
-          title="Delete note"
-          onClick={onDelete}
-        >
-          🗑️
-        </button>
-      </div>
-      <div className={styles.notePreview}>{getBodyPreview(note.body)}</div>
-      <div className={styles.noteDate}>{formatDate(note.updatedAt)}</div>
-    </div>
+    <li className={`${styles.noteItem} ${isActive ? styles.active : ''}`}>
+      <button
+        type="button"
+        className={styles.openBtn}
+        onClick={onClick}
+        aria-current={isActive ? 'true' : undefined}
+      >
+        <span className={styles.noteTitle}>{title}</span>
+        <span className={styles.notePreview}>{getBodyPreview(note.body)}</span>
+        <span className={styles.noteDate}>{formatDate(note.updatedAt)}</span>
+      </button>
+      <button
+        type="button"
+        className={styles.deleteBtn}
+        title="Delete note"
+        aria-label={`Delete note: ${title}`}
+        onClick={onDelete}
+      >
+        🗑️
+      </button>
+    </li>
   )
 }

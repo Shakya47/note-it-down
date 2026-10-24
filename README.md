@@ -1,159 +1,150 @@
 # Note It Down 📝
 
-![Note It Down Demo](public/demo.gif)
+![Note It Down Demo](docs/demo.gif)
 
-A note-taking Chrome Extension that leverages the modern **Document Picture-in-Picture (PiP)** API to create floating, borderless, always-on-top text editors.
+A note-taking Chrome extension with a floating **Picture-in-Picture** editor, plus a small phone app. Notes sync between your devices through your own Cloudflare Worker, end-to-end encrypted.
 
 ## Features
-- **Floating PiP Editor**: Instantly pop out any note into a native, always-on-top Picture-in-Picture window.
-- **Themed Aesthetic**: A fully themed light and dark mode UI.
-- **Shadow DOM Isolation**: The popup launcher is injected directly into the webpage using an isolated Shadow DOM, completely shielding it from aggressive CSS bleeding on strict sites like Reddit.
-- **Zero Distractions**: The PiP editor strips away borders, headers, and footers to provide a 100% full-bleed, immersive writing canvas.
-- **Offline First**: All notes are stored locally in Chrome's storage. No internet required.
-- **Zero-Knowledge Sync**: Opt-in, end-to-end client-side encrypted sync (AES-GCM 256-bit) via a self-hosted Cloudflare Worker KV relay.
 
-## Installation (Developer Mode)
+- **Floating editor**: pop any note into an always-on-top Picture-in-Picture window while you browse.
+- **Offline first**: notes live on your device and work without internet.
+- **Private sync (optional)**: notes are encrypted on your device before upload. Your worker stores a locked blob it cannot read.
+- **Phone app**: the same notes on your phone, installable to the home screen, served by your own worker.
+- **Light & dark themes**.
+
+---
+
+## Quick start
+
+### 1. Install the extension (about 2 minutes)
+
+You need [Node.js](https://nodejs.org) 22 or newer and [pnpm](https://pnpm.io/installation), plus Chrome 116 or newer.
 
 1. Clone this repository.
-2. Install dependencies: `pnpm install`
-3. Build the extension: `pnpm build`
-4. Open Chrome and navigate to `chrome://extensions/`
-5. Enable **Developer mode** in the top right corner.
-6. Click **Load unpacked** and select the `dist` folder inside this project.
-7. Pin the extension to your toolbar and click the icon to open the launcher!
-8. **Sync Layer (Optional)**: If you want to enable cross-device sync, deploy your own serverless worker by following the **[Sync Worker Deployment Instructions](sync-worker/README.md#deployment-instructions)** (or absolute path **[Sync Worker Deployment Instructions](file:///Users/saurabhshakya/Documents/Projects/note-it-down/sync-worker/README.md#deployment-instructions)**).
+2. `pnpm install`
+3. `pnpm build`
+4. Open `chrome://extensions`, turn on **Developer mode** (top right).
+5. Click **Load unpacked** and select the `dist` folder.
+6. Pin the extension and click its icon on any page to open the drawer.
 
-## 🧩 Powered by `pip-it-up`
-This extension was built to showcase how effortlessly you can wrap any React component in a native PiP window using the `@pip-it-up/react` library. 
+After changing code, run `pnpm build` again and click ↻ on the extension in `chrome://extensions`.
 
-Here is the exact code snippet from our `EditorOverlay.tsx` showing the controlled implementation of `<PipWrapper>`:
+### 2. Set up sync and the phone app (optional, about 10 minutes)
 
-```tsx
-import { PipWrapper } from '@pip-it-up/react'
+Your sync server runs on **your own** free Cloudflare account. Nobody else holds your data or your login.
 
-// ...inside the component...
+1. Click the button and follow the prompts (a free Cloudflare account and a GitHub account are needed). Keep the default settings. When it finishes you get your worker URL.
 
-<PipWrapper
-  width={380}
-  height={360}
-  open={activeNoteId !== null}
-  onOpenChange={(openState) => {
-    if (!openState) {
-      setActiveNoteId(null)
-    }
-  }}
-  placeholder={<div style={{ display: 'none' }} />}
->
-  {activeNoteId && (
-    <NoteEditor
-      key={activeNoteId}
-      noteId={activeNoteId}
-      onClose={() => setActiveNoteId(null)}
-      theme={theme}
-    />
-  )}
-</PipWrapper>
-```
+   [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Shakya47/note-it-down)
+
+   Prefer the terminal? `npx wrangler login`, then `pnpm run deploy`. Full guide: **[sync-worker/README.md](sync-worker/README.md)**.
+2. Extension: drawer → **☁️ Sync** → **Set up sync** → paste the URL → **Generate** a token → **Save & Sync**.
+3. Phone: open the worker URL → ⚙️ → paste the **same** token → **Save & Sync** → add it to your home screen.
+
+Yes, the token is copied by hand on purpose. A QR code would be easier, but it would put your key on screen where anyone could capture it. [More on why](sync-worker/README.md#connect-your-phone).
 
 ---
 
-## ☁️ Zero-Knowledge Sync Layer (Optional)
+## How it works
 
-*Note It Down* includes an opt-in, end-to-end encrypted sync system. Your notes are encrypted client-side using derived AES-GCM keys before leaving the device. Sync runs through a **user-deployed** Cloudflare Worker, meaning you own 100% of your data and credentials.
-
-For full configuration and deployment steps, see the **[sync-worker/README.md](sync-worker/README.md)** (or absolute path **[sync-worker/README.md](file:///Users/saurabhshakya/Documents/Projects/note-it-down/sync-worker/README.md)**).
-
-### How Zero-Knowledge Cryptography Works
-
-To achieve complete privacy, the extension employs a zero-knowledge structure using WebCrypto APIs:
-1. **Deterministic Key Derivation (HKDF)**: From your single raw sync token, the extension derives three independent cryptographic values via HKDF-SHA-256 (using a fixed 32-byte zero salt):
-   - `address`: The database lookup key (used as the URL segment on the worker).
-   - `encryptionKey`: An AES-GCM 256-bit key used locally to encrypt/decrypt note database payloads.
-   - `verifyKey`: Stored on the worker during the first sync to authenticate future writes.
-2. **Write Token Derivation (HMAC)**: A `writeToken` is derived by computing an HMAC-SHA256 signature of `"nid-write-auth"` using the derived `verifyKey` bytes as the key.
-3. **Zero-Knowledge Boundary**: The client only transmits the `address`, the `writeToken`, and the encrypted `blob` (plus `verifyKey` on first write). The `encryptionKey` and the raw `token` **never leave your device**.
-4. **Worker Verification**: The worker verifies subsequent writes by re-computing the HMAC signature using the stored `verifyKey` and comparing it to the incoming `writeToken`. The worker is content-blind (cannot read notes) and token-blind (does not know the raw token).
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant UI as Extension UI
-    participant Sync as sync.ts (Orchestrator)
-    participant Crypto as crypto.ts (WebCrypto)
-    participant Storage as storage.ts (Chrome Local)
-    participant Merge as merge.ts (Resolution)
-    participant Worker as Cloudflare Worker & KV
-
-    UI->>Sync: User clicks 'Save & Sync'
-    
-    activate Sync
-    Sync->>Crypto: Derive address, encryptionKey, verifyKey, & writeToken
-    Crypto-->>Sync: Keys returned (derived via HKDF & HMAC-SHA256)
-    
-    Sync->>Worker: GET /v1/:address (Retrieve remote database)
-    alt Remote data exists
-        Worker-->>Sync: 200 OK with { blob, blobHash }
-        Sync->>Crypto: Decrypt remote blob using encryptionKey
-        Crypto-->>Sync: Decrypted remote notes (JSON)
-    else First-time sync (no remote data)
-        Worker-->>Sync: 404 Not Found
-        Sync->>Sync: Set isFirstWrite = true
-    end
-
-    Sync->>Storage: Retrieve current local notes
-    Storage-->>Sync: Return local notes array
-
-    Sync->>Merge: mergeNotes(local, remote)
-    Note over Merge: Deterministically merges notes by version/updatedAt (creates conflict copies on divergence).
-    Merge-->>Sync: Merged notes array returned
-
-    Sync->>Storage: Save merged notes back to browser storage
-    
-    Sync->>Crypto: Encrypt merged notes using encryptionKey (AES-GCM-256)
-    Crypto-->>Sync: Return new Encrypted Blob
-
-    Sync->>Worker: PUT /v1/:address { blob, writeToken, verifyKey?, previousHash }
-    Note over Worker: Worker validates writeToken against verifyKey and performs a Compare-and-Swap (CAS) check.
-    
-    alt 409 Conflict (Remote was updated during sync)
-        Worker-->>Sync: 409 Conflict
-        Note over Sync: Sync conflict detected! Start retry loop (Max 2 attempts)
-        Sync->>Worker: GET /v1/:address (Fetch fresh remote)
-        Worker-->>Sync: 200 OK with new { blob, blobHash }
-        Sync->>Crypto: Decrypt new remote blob
-        Sync->>Merge: Re-merge local database with new remote database
-        Sync->>Storage: Save re-merged notes
-        Sync->>Crypto: Encrypt new merged database
-        Sync->>Worker: PUT /v1/:address { new blob, writeToken, previousHash: newHash }
-    end
-    
-    Worker-->>Sync: 200 OK (Write Successful)
-    deactivate Sync
-    
-    Sync-->>UI: Return SyncResult (success/syncedAt)
+```
+  LAPTOP                              CLOUDFLARE (your account)                PHONE
+┌──────────────────────┐            ┌────────────────────────────┐        ┌──────────────────────┐
+│ Chrome extension     │            │ Worker  (sync-worker/)      │        │ Phone app  (web/)    │
+│ notes in Chrome      │ ── sync ─▶ │ /v1/...  → sync mailbox     │ ◀ sync │ notes in the phone   │
+│ storage              │ ◀───────── │ /        → phone app files  │ ──────▶│ browser (IndexedDB)  │
+└──────────────────────┘            └────────────────────────────┘        └──────────────────────┘
 ```
 
-### Why Cloudflare Workers & KV?
-Deploying your own worker provides a powerful backend with zero overhead:
-- **100% Private & Self-Hosted**: No accounts, no database hosting, and zero visibility of your notes by anyone (including Cloudflare, as all blobs are client-side encrypted).
-- **Generous Free Tier**: Cloudflare's free tier is more than enough for personal note-taking:
-  - **Storage**: Up to **1 GB** of free data in Cloudflare KV (equivalent to hundreds of thousands of notes).
-  - **Requests**: **100,000 free requests** per day.
-  - **KV Operations**: **100,000 read** operations and **1,000 write/delete** operations per day for free. (Assuming you sync 2-3 times a day, you will use less than 1% of the free tier).
-- **Global Speed**: Runs on Cloudflare's edge network, meaning sync is fast and responsive from any location.
+- **Extension** (`src/`): the drawer, editor and options page. Notes are stored in Chrome on your computer. A background service worker saves notes and runs sync.
+- **Worker** (`sync-worker/worker.js`): a tiny program Cloudflare runs at your `*.workers.dev` URL. It is a mailbox: it keeps one encrypted blob per sync ID and only lets you replace it if you hold the token. The same URL also serves the phone app's files.
+- **Phone app** (`web/`): a small web app that keeps notes on the phone and syncs through the same mailbox. Once loaded it works offline.
+- **Sync token**: a random secret generated by the extension. It never leaves your devices; it is used to encrypt notes, find your mailbox and prove you may write to it. Every device with the same token sees the same notes. The **Sync ID** shown under the token is a fingerprint of it — it must match on all devices.
+
+### What a sync does
+
+1. Download the encrypted blob and decrypt it with the token.
+2. Merge it with local notes. Each device remembers the version of every note at the last sync: if only one side changed a note, that change wins; if both did, the newer edit keeps the note and the other is saved as a `⚠️ [CONFLICT]` copy. Nothing is silently lost.
+3. Encrypt the result and upload it, but only if something changed. The worker rejects the upload if another device wrote in the meantime; the device then re-downloads, re-merges and retries.
+
+Sync runs automatically: when the browser or app opens, a few seconds after edits, every few minutes, and when you open the drawer. The drawer's **☁️ Sync** tab and the phone app's status pill show the current state.
 
 ---
 
-## 🚀 Technical Challenges & Solutions
+## Using it
 
-Building a Chrome extension that blends the Document Picture-in-Picture API with React 19, Vite, and injected content scripts introduced several browser security and lifecycle boundaries. Here is how we tackled them:
+| Where | How |
+| :--- | :--- |
+| Open the drawer | Click the toolbar icon on any normal web page. |
+| Edit a note | Click it in the drawer. It opens in a floating Picture-in-Picture window. On plain `http://` pages (where Picture-in-Picture isn't available) it opens inside the drawer instead. |
+| Sync settings | Drawer → **☁️ Sync** → **Sync settings** (opens the extension's options page). |
+| Phone app | Open your worker URL. iPhone: Safari → Share → **Add to Home Screen**. Android: Chrome → ⋮ → **Install app**. |
 
-| Challenge | Browser Policy / Security Boundary | The Problem | How We Tackled It (Solution) |
-| :--- | :--- | :--- | :--- |
-| **1. Sandboxed Extension Frame** | Extensions block `documentPictureInPicture` in popups and side panels. | `requestWindow()` throws security exceptions in default extension frames. | Migrated the extension UI into a webpage-injected sidebar drawer panel. |
-| **2. Gesture Token Expiration** | Document PiP requires a direct, synchronous user gesture (e.g. click). | Async message passing (popup → content script) expires the user click token. | Rendered the UI directly in host DOM so user clicks act as native webpage gestures. |
-| **3. Content Security Policy (CSP)** | Secure host pages block lazy-loaded script chunks. | Dynamic chunk loading causes CSP violations on sites like GitHub/Google. | Configured Vite to bundle the content script into a single, standalone IIFE script. |
-| **4. CSS Style Sheet Isolation** | Content scripts run in isolated worlds invisible to host stylesheets. | Copying `document.styleSheets` inside PiP yields empty unstyled HTML. | Injected the extension's absolute CSS URL directly into the PiP window `<head>` on load. |
-| **5. Theme Scoping & Bleed** | Floating PiP window runs in a separate root document context. | Browser default PiP background causes unstyled margins and layout clutter. | Dynamically repainted the PiP body background and hid headers/footers for full-bleed viewport. |
-| **6. Host CSS Bleeding** | Host page global stylesheets reset/infect injected elements. | Host resets (like Reddit) break layout and alignments in the launcher. | Encapsulated the React app's mounting root inside an isolated **Shadow DOM**. |
-| **7. Server-Blind Sync Auth** | Server must validate writes without access to raw credentials or data. | Storing tokens on-server breaks the zero-knowledge privacy model. | Used HKDF to derive separate keys; verified write tokens via HMAC of a verify key. |
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+| :--- | :--- |
+| Notes don't appear on another device | Compare the **Sync ID** in both places. If they differ, the devices use different tokens: copy the token from one device and paste it on the other. |
+| "Sync failed" | Open sync settings to see the error. Check the Worker URL starts with `https://`. |
+| Drawer says "Note It Down was updated or reloaded" | The extension was updated while the page was open. Copy any unsaved text, then reload the page. |
+| Clicking the icon does nothing (red **!** badge) | Chrome doesn't allow extensions on that page (e.g. `chrome://`, the Web Store). Try a normal website. |
+| A `⚠️ [CONFLICT]` note appeared | The same note was edited on two devices before they synced. Keep the version you want and delete the other. |
+| `pnpm run deploy` says "Not logged in" | Run `npx wrangler login` and try again. |
+
+---
+
+## Development
+
+| Command | What it does |
+| :--- | :--- |
+| `pnpm dev` | Watch-build the extension (load `dist` in Chrome). |
+| `pnpm build` | Build the extension into `dist`. |
+| `pnpm dev:web` | Run the phone app at http://localhost:5180. |
+| `pnpm build:web` | Build the phone app into `sync-worker/public`. |
+| `pnpm run deploy` | Build the phone app and deploy it together with the worker to your Cloudflare account (`wrangler.toml`). Note: `pnpm deploy` without `run` is a different, built-in pnpm command. |
+| `pnpm test` | Run the tests (merge rules, sync end-to-end against the worker code, storage). |
+| `pnpm lint` | Lint. |
+
+### Project layout
+
+```
+src/
+  background.ts, background/   extension service worker: note storage + sync scheduling
+  content/                     the in-page drawer (closed shadow DOM)
+  components/                  note list and editor (shared with the phone app)
+  options/, ui/settings/       sync settings page and drawer sync status
+  lib/                         note model, storage logic (shared), messaging
+  sync/                        encryption, merge and sync engine (shared)
+web/                           phone app (PWA)
+sync-worker/                   Cloudflare Worker + deployment guide
+```
+
+The extension and the phone app share the same note model, storage rules, merge logic and encryption (`src/lib`, `src/sync`), so they always sync the same way.
+
+---
+
+## Privacy & security
+
+- Notes and the token stay on your devices; the worker only ever sees encrypted data.
+- Sync settings live on the extension's own options page; websites can't read the token or your notes from the drawer.
+- The drawer is only injected into a page when you click the extension icon.
+
+---
+
+## Technical notes
+
+| Challenge | Solution |
+| :--- | :--- |
+| Document Picture-in-Picture is blocked in extension popups and needs a direct user click. | The UI is injected into the page as a drawer, so a click on a note is a real page gesture that can open the PiP window. |
+| Strict sites block lazy-loaded script chunks (CSP). | The content script is bundled as one standalone script. |
+| The PiP window and the shadow root don't see the page's or extension's stylesheets. | The compiled CSS is inlined into the content script at build time and injected as `<style>` into both, with no web-accessible file for sites to probe. |
+| Host pages' CSS and scripts interfere with injected UI. | The drawer lives in a closed shadow root attached to `<html>`, so page scripts can't reach in and `<body>` swaps don't remove it. |
+| The server must authorise writes without seeing the token. | HKDF derives separate keys from the token; writes are checked with an HMAC of a derived verify key. |
+
+Built with [`@pip-it-up/react`](https://www.npmjs.com/package/@pip-it-up/react) for the Picture-in-Picture window.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

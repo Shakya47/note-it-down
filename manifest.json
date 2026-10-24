@@ -3,13 +3,13 @@
   "name": "Note It Down",
   "version": "1.0.0",
   "description": "A note-taking extension with floating Picture-in-Picture editor.",
+  "minimum_chrome_version": "116",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://*.workers.dev/*"
+    "scripting",
+    "alarms"
   ],
   "icons": {
     "16": "icons/icon16.png",
@@ -19,18 +19,12 @@
   "action": {
     "default_title": "Open Note It Down"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "background": {
     "service_worker": "src/background.ts",
     "type": "module"
-  },
-  "web_accessible_resources": [
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "resources": [
-        "content.css"
-      ]
-    }
-  ]
+  }
 }

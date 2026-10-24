@@ -11,16 +11,13 @@ export default defineConfig({
     {
       name: 'remove-crx-platform',
       configResolved(config) {
-        if (config.build.rollupOptions && (config.build.rollupOptions as any).platform) {
-          delete (config.build.rollupOptions as any).platform;
+        const rollupOptions = config.build.rollupOptions as Record<string, unknown> | undefined
+        if (rollupOptions?.platform) {
+          delete rollupOptions.platform
         }
       }
     }
   ],
-  esbuild: {
-    // @ts-ignore - drop is valid in esbuild but missing in some Vite TS definitions
-    drop: ['console', 'debugger'],
-  },
   server: {
     port: 54322,
     strictPort: true,

@@ -1,95 +1,102 @@
 import type { Note } from '../types';
+import { makeConflictCopy, sameContent, sanitizeNote } from '../lib/notes';
+
+/** Version of each note as of the last successful sync (the common ancestor). */
+export type SyncBase = Record<string, number>;
 
 /**
- * Merges two arrays of Note objects using last-write-wins per note,
- * with conflict flagging for same-version divergence.
+ * Three-way merge of local and remote notes.
  *
- * Rules:
- * 1. Note ID only in local -> Include as-is.
- * 2. Note ID only in remote -> Include as-is.
- * 3. Same ID, different version -> Keep the copy with the higher version.
- * 4. Same ID, same version, identical title + body -> Keep one copy.
- * 5. Same ID, same version, different title or body -> Keep both:
- *    - The one with the later updatedAt as the "winner"
- *    - A conflict copy with id: originalId + "_conflict" and title prefixed with "⚠️ [CONFLICT] "
+ * Rules, per note id:
+ * 1. Only on one side -> keep it.
+ * 2. Same content on both sides -> keep the copy with the higher version.
+ * 3. Base version known:
+ *    - only local changed since the last sync  -> keep local
+ *    - only remote changed since the last sync -> keep remote
+ *    - both changed                            -> concurrent edit (rule 5)
+ * 4. No base version (device has never synced this note with this client
+ *    version) -> the higher version wins; equal versions -> concurrent edit.
+ * 5. Concurrent edit:
+ *    - an edit beats a deletion (no content is lost)
+ *    - otherwise the later updatedAt wins and the other copy is kept as a
+ *      conflict copy with a deterministic id.
+ *    The surviving note gets a version above both sides so every device
+ *    treats it as the newest copy.
  */
-export function mergeNotes(localNotes: Note[], remoteNotes: Note[]): Note[] {
-  const result: Note[] = [];
-
-  const sanitizeNote = (note: Note): Note => {
-    if (note.deleted && (note.title !== '' || note.body !== '')) {
-      return { ...note, deleted: undefined };
-    }
-    return note;
-  };
-
+export function mergeNotes(localNotes: Note[], remoteNotes: Note[], base: SyncBase = {}): Note[] {
   const localMap = new Map<string, Note>();
-  for (const note of localNotes) {
-    localMap.set(note.id, sanitizeNote(note));
-  }
+  for (const note of localNotes) localMap.set(note.id, sanitizeNote(note));
 
   const remoteMap = new Map<string, Note>();
-  for (const note of remoteNotes) {
-    remoteMap.set(note.id, sanitizeNote(note));
-  }
+  for (const note of remoteNotes) remoteMap.set(note.id, sanitizeNote(note));
 
   const allIds = new Set([...localMap.keys(), ...remoteMap.keys()]);
+  const result = new Map<string, Note>();
+  const conflictCopies: Note[] = [];
+
+  const resolveConcurrent = (local: Note, remote: Note) => {
+    const version = Math.max(local.version ?? 0, remote.version ?? 0) + 1;
+
+    if (local.deleted && !remote.deleted) return { ...remote, version };
+    if (remote.deleted && !local.deleted) return { ...local, version };
+
+    const [winner, loser] = pickWinner(local, remote);
+    if (!loser.deleted) conflictCopies.push(makeConflictCopy(loser));
+    return { ...winner, version };
+  };
 
   for (const id of allIds) {
-    const localNote = localMap.get(id);
-    const remoteNote = remoteMap.get(id);
+    const local = localMap.get(id);
+    const remote = remoteMap.get(id);
 
-    if (localNote && !remoteNote) {
-      result.push(localNote);
-    } else if (!localNote && remoteNote) {
-      result.push(remoteNote);
-    } else if (localNote && remoteNote) {
-      const localVer = localNote.version ?? 0;
-      const remoteVer = remoteNote.version ?? 0;
+    if (!local || !remote) {
+      result.set(id, (local ?? remote)!);
+      continue;
+    }
 
-      if (localVer > remoteVer) {
-        result.push(localNote);
-      } else if (remoteVer > localVer) {
-        result.push(remoteNote);
+    const localVer = local.version ?? 0;
+    const remoteVer = remote.version ?? 0;
+
+    if (sameContent(local, remote)) {
+      result.set(id, localVer >= remoteVer ? local : remote);
+      continue;
+    }
+
+    const baseVer = base[id];
+    if (baseVer !== undefined) {
+      const localChanged = localVer !== baseVer;
+      const remoteChanged = remoteVer !== baseVer;
+      if (localChanged && !remoteChanged) {
+        result.set(id, local);
+      } else if (remoteChanged && !localChanged) {
+        result.set(id, remote);
       } else {
-        // Same version
-        const isContentIdentical =
-          localNote.title === remoteNote.title && localNote.body === remoteNote.body;
-
-        if (isContentIdentical) {
-          // Keep one copy, prefer local (they are identical content anyway)
-          result.push(localNote);
-        } else {
-          // Divergent content at same version -> Conflict!
-          // Tiebreaker on updatedAt to determine the winner
-          const localTime = new Date(localNote.updatedAt).getTime();
-          const remoteTime = new Date(remoteNote.updatedAt).getTime();
-
-          let winner: Note;
-          let loser: Note;
-
-          if (localTime >= remoteTime) {
-            winner = localNote;
-            loser = remoteNote;
-          } else {
-            winner = remoteNote;
-            loser = localNote;
-          }
-
-          // Keep winner as-is
-          result.push(winner);
-
-          // Keep loser as conflict copy
-          const conflictNote: Note = {
-            ...loser,
-            id: `${id}_conflict`,
-            title: `⚠️ [CONFLICT] ${loser.title}`,
-          };
-          result.push(conflictNote);
-        }
+        result.set(id, resolveConcurrent(local, remote));
       }
+    } else if (localVer > remoteVer) {
+      result.set(id, local);
+    } else if (remoteVer > localVer) {
+      result.set(id, remote);
+    } else {
+      result.set(id, resolveConcurrent(local, remote));
     }
   }
 
-  return result;
+  // A conflict copy whose id already exists was produced by an earlier merge
+  // of the same conflict; the stored copy (possibly edited since) wins.
+  for (const copy of conflictCopies) {
+    if (!result.has(copy.id)) result.set(copy.id, copy);
+  }
+
+  return [...result.values()];
+}
+
+/** Later updatedAt wins; ties are broken on content so every device agrees. */
+function pickWinner(a: Note, b: Note): [Note, Note] {
+  const aTime = Date.parse(a.updatedAt) || 0;
+  const bTime = Date.parse(b.updatedAt) || 0;
+  if (aTime !== bTime) return aTime > bTime ? [a, b] : [b, a];
+  const aKey = `${a.title}\u0000${a.body}`;
+  const bKey = `${b.title}\u0000${b.body}`;
+  return aKey >= bKey ? [a, b] : [b, a];
 }

@@ -4,13 +4,34 @@
   background-color: var(--color-white);
   border: var(--border-width) solid var(--color-dark);
   border-radius: var(--border-radius-md);
-  padding: 10px 12px;
-  cursor: pointer;
+  position: relative;
+  list-style: none;
   box-shadow: 3px 3px 0px var(--color-dark);
   transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.openBtn {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 40px 10px 12px;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: inherit;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.openBtn:focus-visible,
+.deleteBtn:focus-visible {
+  outline: 3px solid var(--color-accent-blue);
+  outline-offset: 2px;
 }
 
 .noteItem.active {
@@ -30,13 +51,6 @@
   box-shadow: var(--shadow-active);
 }
 
-.noteItemHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-}
-
 .noteTitle {
   font-size: 14px;
   font-weight: 800;
@@ -45,6 +59,9 @@
 }
 
 .deleteBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   background: none;
   border: none;
   font-size: 14px;
@@ -60,6 +77,8 @@
 }
 
 .notePreview {
+  display: block;
+  max-width: 100%;
   font-size: 12px;
   color: var(--color-text);
   opacity: 0.8;

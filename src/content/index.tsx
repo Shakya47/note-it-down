@@ -1,89 +1,95 @@
 import { StrictMode } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 import { EditorOverlay } from './EditorOverlay'
+import { injectStyles } from './styles'
+import { TOGGLE_DRAWER } from '../lib/messages'
 import './overlay.css'
 
 const CONTAINER_ID = 'note-it-down-overlay-root'
-let root: Root | null = null
-let toggleDrawerFn: (() => void) | null = null
 
-function getOrCreateContainer(): HTMLElement {
-  let container = document.getElementById(CONTAINER_ID)
-  if (container && container.shadowRoot) {
-    return container.shadowRoot.getElementById('shadow-root-mount') as HTMLElement
-  }
-  
-  if (!container) {
-    container = document.createElement('div')
-    container.id = CONTAINER_ID
-    container.style.position = 'static'
-    container.style.width = '0'
-    container.style.height = '0'
-    container.style.overflow = 'visible'
-    container.style.zIndex = '2147483647'
-    document.body.appendChild(container)
-  }
-  
-  const shadow = container.attachShadow({ mode: 'open' })
-  
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = chrome.runtime.getURL('content.css')
-  shadow.appendChild(link)
+interface OverlayInstance {
+  destroy: () => void
+}
 
+declare global {
+  interface Window {
+    __noteItDown?: OverlayInstance
+  }
+}
+
+function mountOverlay(): OverlayInstance {
+  // Re-injection (double click, or after an extension update left an orphaned
+  // copy behind): tear the old instance down instead of mounting a second
+  // React root into the same container.
+  window.__noteItDown?.destroy()
+  document.getElementById(CONTAINER_ID)?.remove()
+
+  const container = document.createElement('div')
+  container.id = CONTAINER_ID
+  container.style.position = 'static'
+  container.style.width = '0'
+  container.style.height = '0'
+  container.style.overflow = 'visible'
+
+  // Closed shadow root: page scripts can't reach into the drawer through
+  // element.shadowRoot to read note titles and previews.
+  const shadow = container.attachShadow({ mode: 'closed' })
+  injectStyles(shadow, 'nid-styles')
   const mountPoint = document.createElement('div')
-  mountPoint.id = 'shadow-root-mount'
   shadow.appendChild(mountPoint)
 
-  return mountPoint
-}
-
-
-function initializeOverlay() {
-  const container = getOrCreateContainer()
-
-  if (root) {
-    return;
+  // Attach to <html> rather than <body>: sites that swap <body> on navigation
+  // (e.g. Turbo on GitHub) would otherwise remove the drawer.
+  const ensureAttached = () => {
+    if (!container.isConnected) document.documentElement.appendChild(container)
   }
+  ensureAttached()
+  const observer = new MutationObserver(ensureAttached)
+  observer.observe(document.documentElement, { childList: true })
 
-  // Define toggle callback to be called from extension listeners
-  const registerToggleCallback = (toggleFn: () => void) => {
-    toggleDrawerFn = toggleFn
-  }
-
-  root = createRoot(container)
-  root.render(
-    <StrictMode>
-      <EditorOverlay registerToggle={registerToggleCallback} />
-    </StrictMode>
-  )
-}
-
-// Automatically mount the overlay when the content script loads on standard webpages
-if (typeof document !== 'undefined') {
-  if (document.body) {
-    initializeOverlay();
-  } else {
-    document.addEventListener('DOMContentLoaded', initializeOverlay);
-  }
-}
-
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'TOGGLE_DRAWER') {
-    if (toggleDrawerFn) {
-      toggleDrawerFn();
-      sendResponse({ success: true, drawerToggled: true });
-    } else {
-      initializeOverlay();
-      setTimeout(() => {
-        if (toggleDrawerFn) {
-          toggleDrawerFn();
-          sendResponse({ success: true, drawerToggled: true });
-        } else {
-          sendResponse({ success: false, error: 'Overlay not fully initialized.' });
-        }
-      }, 100);
+  let toggleDrawer: (() => void) | null = null
+  let toggleQueued = false
+  const registerToggle = (toggleFn: () => void) => {
+    toggleDrawer = toggleFn
+    if (toggleQueued) {
+      toggleQueued = false
+      toggleFn()
     }
   }
-  return false;
-});
+
+  const root = createRoot(mountPoint)
+  root.render(
+    <StrictMode>
+      <EditorOverlay registerToggle={registerToggle} />
+    </StrictMode>
+  )
+
+  const onMessage = (message: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (response: unknown) => void) => {
+    if ((message as { type?: unknown } | null)?.type !== TOGGLE_DRAWER) return false
+    ensureAttached()
+    if (toggleDrawer) {
+      toggleDrawer()
+    } else {
+      // React hasn't committed yet; toggle as soon as it registers.
+      toggleQueued = true
+    }
+    sendResponse({ ok: true })
+    return false
+  }
+  chrome.runtime.onMessage.addListener(onMessage)
+
+  return {
+    destroy() {
+      observer.disconnect()
+      try {
+        chrome.runtime.onMessage.removeListener(onMessage)
+      } catch {
+        // Orphaned instance: its extension context is already gone.
+      }
+      root.unmount()
+      container.remove()
+    },
+  }
+}
+
+window.__noteItDown = mountOverlay()
