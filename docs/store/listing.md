@@ -65,4 +65,4 @@ Setting up sync takes about 10 minutes (the README walks through it). Notes work
 | Official URL / Homepage | `https://github.com/Shakya47/note-it-down` |
 | Support URL | `https://github.com/Shakya47/note-it-down/issues` |
 | Screenshots | The five files in this folder, in numeric order |
-| Promo video (optional) | Upload `brag-output/brag.mp4` to YouTube and paste the link. |
+| Promo video (optional) | Upload your launch video to YouTube and paste the link. |
