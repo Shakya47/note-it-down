@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- Note It Down icon: the app's own look (thick ink outline, hard shadow, yellow/pink/teal).
+       Source for public/icons/*.png and web/public/icons/*.png; render with real transparency. -->
+  <defs>
+    <clipPath id="note"><rect x="4" y="4" width="80" height="80" rx="16" /></clipPath>
+  </defs>
+
+  <!-- Hard offset shadow -->
+  <rect x="9" y="9" width="80" height="80" rx="16" fill="#1A1A1A" />
+
+  <!-- Note body -->
+  <rect x="4" y="4" width="80" height="80" rx="16" fill="#FFD166" />
+
+  <!-- Pink binder strip with two holes -->
+  <g clip-path="url(#note)">
+    <rect x="0" y="0" width="90" height="26" fill="#FF6B9D" />
+  </g>
+  <circle cx="26" cy="15" r="3.6" fill="#1A1A1A" />
+  <circle cx="62" cy="15" r="3.6" fill="#1A1A1A" />
+  <line x1="4" y1="26" x2="84" y2="26" stroke="#1A1A1A" stroke-width="5" />
+
+  <!-- Ruled lines -->
+  <g stroke="#1A1A1A" stroke-width="5" stroke-linecap="round">
+    <line x1="18" y1="40" x2="68" y2="40" />
+    <line x1="18" y1="52" x2="68" y2="52" />
+    <line x1="18" y1="64" x2="36" y2="64" />
+    <line x1="18" y1="76" x2="36" y2="76" />
+  </g>
+
+  <!-- Outline of the note -->
+  <rect x="4" y="4" width="80" height="80" rx="16" fill="none" stroke="#1A1A1A" stroke-width="5" />
+
+  <!-- The floating window popping out of the corner -->
+  <g>
+    <rect x="46" y="58" width="44" height="32" rx="8" fill="#06D6A0" stroke="#1A1A1A" stroke-width="5" />
+    <path d="M48.5 61 h39 a3 3 0 0 1 3 3 v4.5 h-45 v-4.5 a3 3 0 0 1 3 -3 z" fill="#1A1A1A" />
+    <circle cx="56" cy="65" r="1.8" fill="#FFFBF0" />
+    <circle cx="62" cy="65" r="1.8" fill="#FFFBF0" />
+  </g>
+</svg>

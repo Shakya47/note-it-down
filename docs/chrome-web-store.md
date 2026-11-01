@@ -70,6 +70,6 @@ The link only works once `PRIVACY.md` is committed and pushed to `main`. Paste i
    ```
    Don't commit the zip.
 2. **Version.** `manifest.json` says `1.0.0`. Increase it for every later upload; the Store rejects a repeated version.
-3. **Store listing assets.** A 128×128 icon is already in the package. Five ready-made 1280×800 screenshots are in [`docs/store/`](store/); upload them in numeric order (the first is the one shown most prominently). You still need to write the description. A small promo tile (440×280) is optional.
+3. **Store listing assets.** The Store icon is `public/icons/icon128.png` (128×128, transparent, already in the package; the vector source is `docs/store/icon.svg`). Five ready-made 1280×800 screenshots are in [`docs/store/`](store/); upload them in numeric order (the first is the one shown most prominently). You still need to write the description. A small promo tile (440×280) is optional.
 4. **Developer account.** One-time registration fee (US$5) and a verified contact email in the dashboard.
 5. **After approval:** put the Store link in the README's Quick start, in place of "coming soon."
