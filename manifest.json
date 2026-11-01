@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Note It Down",
   "version": "1.0.0",
-  "description": "A note-taking extension with floating Picture-in-Picture editor.",
+  "description": "Floating, always-on-top notes on any page. Optional end-to-end encrypted sync to your phone, through a server you own.",
   "minimum_chrome_version": "116",
   "permissions": [
     "storage",

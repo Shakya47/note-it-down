@@ -33,3 +33,6 @@ public/content.js
 
 # Built web app (served by the sync worker)
 sync-worker/public
+
+# Chrome Web Store upload packages
+note-it-down-*.zip

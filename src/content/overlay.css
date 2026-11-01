@@ -244,7 +244,7 @@
 
 .nid-theme-dark .nid-tab-btn.nid-tab-active {
   background-color: var(--nid-color-accent-blue);
-  color: var(--nid-color-white);
+  color: #FFFFFF;
   text-shadow: 1px 1px 0 var(--nid-color-dark);
 }
 

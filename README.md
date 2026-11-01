@@ -16,9 +16,11 @@ A note-taking Chrome extension with a floating **Picture-in-Picture** editor, pl
 
 ## Quick start
 
-### 1. Install the extension (about 2 minutes)
+### 1. Install the extension
 
-You need [Node.js](https://nodejs.org) 22 or newer and [pnpm](https://pnpm.io/installation), plus Chrome 116 or newer.
+**From the Chrome Web Store (about 1 minute, recommended):** *coming soon.* No cloning or building needed: click **Add to Chrome**, pin the extension, then click its icon on any page to open the drawer. Requires Chrome 116 or newer.
+
+**From source (about 2 minutes):** you need [Node.js](https://nodejs.org) 22 or newer and [pnpm](https://pnpm.io/installation).
 
 1. Clone this repository.
 2. `pnpm install`
@@ -47,13 +49,19 @@ Yes, the token is copied by hand on purpose. A QR code would be easier, but it w
 
 ## How it works
 
-```
-  LAPTOP                              CLOUDFLARE (your account)                PHONE
-┌──────────────────────┐            ┌────────────────────────────┐        ┌──────────────────────┐
-│ Chrome extension     │            │ Worker  (sync-worker/)      │        │ Phone app  (web/)    │
-│ notes in Chrome      │ ── sync ─▶ │ /v1/...  → sync mailbox     │ ◀ sync │ notes in the phone   │
-│ storage              │ ◀───────── │ /        → phone app files  │ ──────▶│ browser (IndexedDB)  │
-└──────────────────────┘            └────────────────────────────┘        └──────────────────────┘
+```mermaid
+flowchart LR
+    subgraph L["💻 Laptop"]
+        E["<b>Chrome extension</b><br/>notes in Chrome storage"]
+    end
+    subgraph C["☁️ Cloudflare (your account)"]
+        W["<b>Worker</b> (sync-worker/)<br/>/v1/… → encrypted sync mailbox<br/>/ → phone app files"]
+    end
+    subgraph P["📱 Phone"]
+        A["<b>Phone app</b> (web/)<br/>notes in the browser (IndexedDB)"]
+    end
+    E <-->|"encrypted sync"| W
+    W <-->|"encrypted sync"| A
 ```
 
 - **Extension** (`src/`): the drawer, editor and options page. Notes are stored in Chrome on your computer. A background service worker saves notes and runs sync.
@@ -130,6 +138,7 @@ The extension and the phone app share the same note model, storage rules, merge 
 - Notes and the token stay on your devices; the worker only ever sees encrypted data.
 - Sync settings live on the extension's own options page; websites can't read the token or your notes from the drawer.
 - The drawer is only injected into a page when you click the extension icon.
+- No analytics, no ads, no accounts, and no code loaded from the internet. Full details in the **[Privacy Policy](PRIVACY.md)**.
 
 ---
 
