@@ -265,3 +265,54 @@
   background-color: var(--color-red);
   color: #FFFFFF;
 }
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-md);
+  box-shadow: 2px 2px 0px var(--color-dark);
+}
+
+.guideTitle {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.steps li + li {
+  margin-top: 4px;
+}
+
+.syncBtnLink {
+  composes: syncBtn;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
+.genBtnLink {
+  composes: genBtn;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+}
+
+.faqItem {
+  margin: 6px 0 0 8px;
+  font-size: 11px;
+}
+
+.faqItem summary {
+  font-weight: 700;
+}

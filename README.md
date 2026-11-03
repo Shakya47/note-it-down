@@ -99,6 +99,7 @@ Sync runs automatically: when the browser or app opens, a few seconds after edit
 | Notes don't appear on another device | Compare the **Sync ID** in both places. If they differ, the devices use different tokens: copy the token from one device and paste it on the other. |
 | "Sync failed" | Open sync settings to see the error. Check the Worker URL starts with `https://`. |
 | Drawer says "Note It Down was updated or reloaded" | The extension was updated while the page was open. Copy any unsaved text, then reload the page. |
+| Not sure what to do, or sync shows an error | Open the extension's settings page: it has the **Deploy to Cloudflare** button, the 3-step setup, and a **Troubleshooting & FAQ** that opens the right answer for your error. |
 | Clicking the icon does nothing (red **!** badge) | Chrome doesn't allow extensions on that page (e.g. `chrome://`, the Web Store). Try a normal website. |
 | A `⚠️ [CONFLICT]` note appeared | The same note was edited on two devices before they synced. Keep the version you want and delete the other. |
 | `pnpm run deploy` says "Not logged in" | Run `npx wrangler login` and try again. |

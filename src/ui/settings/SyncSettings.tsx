@@ -5,9 +5,13 @@ import { STORAGE_KEYS } from '../../lib/messages';
 import { sendToBackground } from '../../lib/notesClient';
 import { errorMessage } from '../../lib/notes';
 import { formatTimestamp, useSyncStatus } from './useSyncStatus';
+import { SetupGuide } from './SetupGuide';
+import { Troubleshooting } from './Troubleshooting';
+import { checkWorker } from '../../sync/engine';
 import styles from './SyncSettings.module.css';
 
 type Busy = null | 'save' | 'disconnect' | 'delete';
+type WorkerCheck = 'idle' | 'checking' | 'ok' | 'legacy' | 'unreachable';
 type Message = { kind: 'ok' | 'warn' | 'error'; text: string } | null;
 
 const formatSyncId = (address: string) => `${address.slice(0, 4)}-${address.slice(4, 8)}`.toUpperCase();
@@ -23,6 +27,7 @@ export function SyncSettings() {
   const [message, setMessage] = useState<Message>(null);
   const [copied, setCopied] = useState(false);
   const status = useSyncStatus();
+  const [worker, setWorker] = useState<{ url: string; state: WorkerCheck }>({ url: '', state: 'idle' });
 
   useEffect(() => {
     chrome.storage.local.get([STORAGE_KEYS.serverUrl, STORAGE_KEYS.token]).then((result) => {
@@ -47,6 +52,30 @@ export function SyncSettings() {
     };
   }, [trimmedToken]);
   const address = derived?.token === trimmedToken ? derived.address : null;
+
+  // Check the pasted URL so a person who already has a worker is told so.
+  useEffect(() => {
+    const url = serverUrl.trim();
+    if (!url) return;
+    try {
+      normalizeServerUrl(url);
+    } catch {
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setWorker({ url, state: 'checking' });
+      checkWorker(url).then(
+        (result) => !cancelled && setWorker({ url, state: result }),
+        () => !cancelled && setWorker({ url, state: 'unreachable' })
+      );
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [serverUrl]);
+  const workerState: WorkerCheck = worker.url === serverUrl.trim() ? worker.state : 'idle';
 
   const handleGenerateToken = () => {
     if (
@@ -162,6 +191,8 @@ export function SyncSettings() {
         minutes and shortly after each edit.
       </p>
 
+      <SetupGuide connected={status.configured} workerFound={workerState === 'ok' || workerState === 'legacy'} />
+
       <div className={styles.fieldRow}>
         <label className={styles.fieldLabel} htmlFor="nid-server-url">Worker URL</label>
         <input
@@ -176,6 +207,10 @@ export function SyncSettings() {
           spellCheck={false}
           data-element-id="server-url-input"
         />
+        {workerState === 'checking' && <div className={styles.syncTimestamp}>Checking…</div>}
+        {workerState === 'unreachable' && (
+          <div className={styles.syncTimestamp}>Can't reach a Note It Down worker at this URL yet. See Troubleshooting below.</div>
+        )}
       </div>
 
       <div className={styles.fieldRow}>
@@ -235,18 +270,6 @@ export function SyncSettings() {
         </div>
       )}
 
-      <p className={styles.helpText}>
-        Need a worker? See the{' '}
-        <a
-          href="https://github.com/Shakya47/note-it-down/blob/main/sync-worker/README.md"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          deploy instructions
-        </a>
-        .
-      </p>
-
       <button className={styles.syncBtn} onClick={handleSaveAndSync} disabled={disabled} data-element-id="save-sync-btn">
         {busy === 'save' ? 'Syncing...' : 'Save & Sync'}
       </button>
@@ -291,6 +314,8 @@ export function SyncSettings() {
           <code className={styles.fullAddress}>{address}</code>
         </details>
       )}
+
+      <Troubleshooting lastError={status.lastStatus === 'error' ? status.lastError : null} />
 
       {status.configured && (
         <div className={styles.dangerZone}>
