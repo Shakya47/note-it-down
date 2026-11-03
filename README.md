@@ -18,7 +18,9 @@ A note-taking Chrome extension with a floating **Picture-in-Picture** editor, pl
 
 ### 1. Install the extension
 
-**From the Chrome Web Store (about 1 minute, recommended):** *coming soon.* No cloning or building needed: click **Add to Chrome**, pin the extension, then click its icon on any page to open the drawer. Requires Chrome 116 or newer.
+**From the Chrome Web Store (about 1 minute, recommended):** [**Add Note It Down to Chrome**](https://chromewebstore.google.com/detail/mjehcejdcfanadklffmdifdmpdacfmie). No cloning or building needed: click **Add to Chrome**, pin the extension, then click its icon on any page to open the drawer. Requires Chrome 116 or newer.
+
+> **Note:** Chrome doesn't let any extension run on its own internal pages (`chrome://…`), the Chrome Web Store, or a few other protected pages. On those pages the icon shows a red **!** badge and the drawer won't open. This is a Chrome restriction, not a bug: open any normal website and it works.
 
 **From source (about 2 minutes):** you need [Node.js](https://nodejs.org) 22 or newer and [pnpm](https://pnpm.io/installation).
 
