@@ -293,19 +293,37 @@
   margin-top: 4px;
 }
 
-.syncBtnLink {
-  composes: syncBtn;
-  display: block;
-  text-align: center;
+.deployBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: var(--color-white);
+  border: var(--border-width) solid var(--color-dark);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-main);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-dark);
   text-decoration: none;
+  text-align: center;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
-.genBtnLink {
-  composes: genBtn;
-  display: block;
-  text-align: center;
-  text-decoration: none;
-  white-space: normal;
+.deployBtn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px var(--color-dark);
+}
+
+.deployBtn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--color-dark);
+}
+
+.cfLogo {
+  flex: none;
 }
 
 .faqItem {
