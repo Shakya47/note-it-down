@@ -1,8 +1,8 @@
 # Note It Down 📝
 
-<video src="https://github.com/Shakya47/note-it-down/raw/main/docs/demo.mp4" poster="docs/demo-poster.jpg" controls muted loop playsinline width="100%">
-  <a href="docs/demo.mp4"><img src="docs/demo-poster.jpg" alt="Note It Down demo video"></a>
-</video>
+[![Watch the 47-second demo: click to play](docs/demo-poster.jpg)](docs/demo.mp4)
+
+<sub>▶ Click the picture to watch the 47-second demo.</sub>
 
 A note-taking Chrome extension with a floating **Picture-in-Picture** editor, plus a small phone app. Notes sync between your devices through your own Cloudflare Worker, end-to-end encrypted.
 
