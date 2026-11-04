@@ -2,6 +2,11 @@
 
 A note-taking Chrome extension with a floating **Picture-in-Picture** editor, plus a small phone app. Notes sync between your devices through your own Cloudflare Worker, end-to-end encrypted.
 
+
+https://github.com/user-attachments/assets/6a66b1f4-9c9b-4a87-babd-f451e227b9ae
+
+
+
 ## Features
 
 - **Floating editor**: pop any note into an always-on-top Picture-in-Picture window while you browse.
