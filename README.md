@@ -1,8 +1,6 @@
 # Note It Down 📝
 
-[![Watch the 47-second demo: click to play](docs/demo-poster.jpg)](docs/demo.mp4)
-
-<sub>▶ Click the picture to watch the 47-second demo.</sub>
+![Note It Down demo: notes in a floating window, encrypted sync, and the phone app](docs/demo.gif)
 
 A note-taking Chrome extension with a floating **Picture-in-Picture** editor, plus a small phone app. Notes sync between your devices through your own Cloudflare Worker, end-to-end encrypted.
 
